@@ -2,6 +2,45 @@
 
 ---
 
+## Phase 2 — Core library (pure functions)
+
+### What was built
+- `lib/types.ts` — all TypeScript interfaces (single source of truth for every data shape)
+- `lib/formatters.ts` — 5 formatting functions (currency, percentage, quantity, P&L)
+- `lib/calculations.ts` — all pure calculation functions including position builder, allocation builder, trigger evaluators, and proceeds split
+- `tests/formatters.test.ts` — 23 tests covering all formatters, null inputs, threshold boundaries, and sign rules
+- `tests/calculations.test.ts` — 56 tests covering all calculation functions end-to-end
+
+82/82 tests passing.
+
+### Engineering decisions
+
+**Why the Allocation type deviates from the spec**
+The spec's TypeScript interface defines `currentPct: number` and `gap: number` (non-nullable). But the spec's *behaviour description* says "positions with null value are shown with `currentPct: null` and `gap: null`." These two are contradictory. The behaviour description wins because the interface is just a reference — the behaviour description tells us what the UI actually needs. Updated to `currentPct: number | null` and `gap: number | null`. This is a common lesson in spec-driven development: interfaces describe shape, behaviour descriptions describe intent. When they conflict, intent wins.
+
+**Why `calcTotalPnl` only returns null when BTC or MSTR is missing**
+The function returns null if BTC or MSTR price is unavailable, but still runs if NEAR or ETH is missing. This is a deliberate business logic decision: BTC (~60% of portfolio) and MSTR (~15%) are the dominant positions. If either price is unknown, the total is too unreliable to display. NEAR and ETH are small enough that their absence produces a slightly understated but not misleading total.
+
+**Why `buildPositions` returns allocPct: null**
+`allocPct` requires knowing `totalValue`, which requires the full positions array to be computed first. There's a dependency cycle: you need positions to compute totalValue, and you need totalValue to compute allocPct. The solution is to build positions without allocPct (null), compute totalValue from them, then fill in allocPct in the API route. This is the "two-pass" pattern — a common technique when you need aggregate information to compute per-item properties.
+
+**Why dry powder is included as a position (ticker: 'USD')**
+Dry powder needs to appear in both the PositionsTable and AllocationBars (4% target allocation). Including it as a Position with `ticker: 'USD'` and `value: holdings.dryPowder` keeps the data pipeline uniform — both components work from the same positions array. The alternative (handling dry powder as a special case in each component) would be business logic leakage.
+
+**Why the trigger evaluators accept null and return severity: 'warn'**
+This follows the spec's null-price handling rules. If a data source is down, the trigger can't evaluate — but it shouldn't crash or throw. Returning `severity: 'warn'` signals "data unavailable, cannot evaluate" rather than silently falling through to a wrong severity. The UI shows red styling for 'warn' which visually communicates the issue.
+
+**The `ALLOCATION_ORDER` constant**
+`buildAllocations` returns allocations in a fixed display order (BTC, MSTR, ONDO, LINK, UNI, NEAR, ETH, CASH), not sorted by value. This is intentional: the allocation chart is a strategic reference, not a performance ranking. Fixed order makes it easier to visually track the same positions across sessions.
+
+### Patterns encountered
+- **Two-pass computation** — positions built first (pass 1), totalValue computed, allocPct filled in (pass 2)
+- **Behaviour-over-interface** — when spec interface and spec behaviour conflict, behaviour wins
+- **Null as a meaningful value** — `null` in prices/positions isn't an error state, it's a signal. Every function in this library is designed to accept null and propagate it correctly rather than throwing.
+- **Constants at module level** — `TARGET_ALLOCATIONS`, `ASSET_COLORS`, and `ALLOCATION_ORDER` are defined once in `calculations.ts`. They're not exported (components don't need them directly) because the components receive pre-built `Allocation[]` objects.
+
+---
+
 ## Phase 1 — Scaffolding
 
 ### What was built
