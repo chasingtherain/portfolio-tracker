@@ -60,7 +60,7 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
         <span
           data-testid="stat-total-value"
           className="mono"
-          style={{ fontSize: 20, fontWeight: 500, color: 'var(--text)' }}
+          style={{ fontSize: 21, fontWeight: 500, color: 'var(--text)' }}
         >
           {formatCurrency(totalValue)}
         </span>
@@ -71,7 +71,7 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
         <span
           data-testid="stat-gap"
           className="mono"
-          style={{ fontSize: 20, fontWeight: 500, color: gapColor }}
+          style={{ fontSize: 21, fontWeight: 500, color: gapColor }}
         >
           {gapDisplay}
         </span>
@@ -82,7 +82,7 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
         <span
           data-testid="stat-btc-price"
           className="mono"
-          style={{ fontSize: 20, fontWeight: 500, color: 'var(--orange)' }}
+          style={{ fontSize: 21, fontWeight: 500, color: 'var(--orange)' }}
         >
           {formatCurrency(btcPrice)}
         </span>

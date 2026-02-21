@@ -45,7 +45,7 @@ export function Header({ fetchedAt, onRefresh, isRefreshing }: HeaderProps) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
         <h1
           className="mono"
-          style={{ fontSize: 14, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--orange)' }}
+          style={{ fontSize: 15, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--orange)' }}
         >
           PORTFOLIO
         </h1>
@@ -54,7 +54,7 @@ export function Header({ fetchedAt, onRefresh, isRefreshing }: HeaderProps) {
           <span
             data-testid="timestamp"
             className={`mono ${isStale ? 'text-yellow' : 'text-muted'}`}
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
           >
             {isStale && (
               <span data-testid="stale-indicator" aria-label="Stale data">
@@ -76,7 +76,7 @@ export function Header({ fetchedAt, onRefresh, isRefreshing }: HeaderProps) {
           border:       '1px solid var(--border)',
           color:        isRefreshing ? 'var(--text-dim)' : 'var(--text-muted)',
           fontFamily:   'var(--mono)',
-          fontSize:     16,
+          fontSize:     17,
           padding:      '4px 10px',
           borderRadius: 4,
           cursor:       isRefreshing ? 'default' : 'pointer',

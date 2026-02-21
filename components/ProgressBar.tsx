@@ -51,13 +51,13 @@ export function ProgressBar({ totalValue, target, progressPct, gapToTarget }: Pr
           marginTop:      8,
         }}
       >
-        <span data-testid="progress-value" className="mono" style={{ fontSize: 13 }}>
+        <span data-testid="progress-value" className="mono" style={{ fontSize: 14 }}>
           {formatCurrency(totalValue)}
         </span>
-        <span className="mono text-muted" style={{ fontSize: 12 }}>
+        <span className="mono text-muted" style={{ fontSize: 13 }}>
           of {formatCurrency(target)}
         </span>
-        <span data-testid="progress-pct" className="mono" style={{ fontSize: 13, color: 'var(--orange)' }}>
+        <span data-testid="progress-pct" className="mono" style={{ fontSize: 14, color: 'var(--orange)' }}>
           {formatPct(progressPct)}
         </span>
       </div>

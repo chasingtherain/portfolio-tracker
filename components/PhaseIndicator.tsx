@@ -72,13 +72,13 @@ export function PhaseIndicator({ btcPrice }: PhaseIndicatorProps) {
           >
             <div
               className="mono"
-              style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em' }}
+              style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em' }}
             >
               {z.label}
             </div>
             <div
               className="mono"
-              style={{ fontSize: 10, marginTop: 4, opacity: 0.7 }}
+              style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}
             >
               {z.range}
             </div>

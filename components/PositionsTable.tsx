@@ -10,7 +10,7 @@ function pnlColor(pnl: number | null): string {
 
 const TH_STYLE: React.CSSProperties = {
   fontFamily:    'var(--mono)',
-  fontSize:       10,
+  fontSize:       11,
   fontWeight:     500,
   letterSpacing: '0.06em',
   color:         'var(--text-dim)',
@@ -49,10 +49,10 @@ export function PositionsTable({ positions }: PositionsTableProps) {
               >
                 {/* Asset name + ticker stacked */}
                 <td style={{ padding: '10px 0' }}>
-                  <div style={{ fontSize: 13, color: 'var(--text)' }}>{pos.label}</div>
+                  <div style={{ fontSize: 14, color: 'var(--text)' }}>{pos.label}</div>
                   <div
                     className="mono"
-                    style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}
+                    style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}
                   >
                     {pos.ticker}
                   </div>
@@ -61,7 +61,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                 {/* Value — ⚠ icon when price is unavailable */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 13, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 14, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {pos.priceUnavailable ? (
                     <span>
@@ -82,7 +82,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                 {/* Alloc% */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-muted)', padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 14, color: 'var(--text-muted)', padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {pos.priceUnavailable ? '—' : formatPct(pos.allocPct)}
                 </td>
@@ -90,7 +90,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                 {/* P&L dollar */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 13, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 14, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {formatPnl(pos.pnl)}
                 </td>
@@ -98,7 +98,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                 {/* P&L percent */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 13, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 14, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {formatPnlPct(pos.pnlPct)}
                 </td>

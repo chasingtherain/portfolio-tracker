@@ -44,13 +44,13 @@ function AllocationBar({ allocation }: AllocationBarProps) {
       >
         {/* Left: asset label + OW/UW badge */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span className="mono" style={{ fontSize: 11, color: 'var(--text)' }}>
+          <span className="mono" style={{ fontSize: 12, color: 'var(--text)' }}>
             {label}
           </span>
           <span
             data-testid={`allocation-gap-label-${key}`}
             className="mono"
-            style={{ fontSize: 10, color: color_ }}
+            style={{ fontSize: 11, color: color_ }}
           >
             {label_}
           </span>
@@ -61,11 +61,11 @@ function AllocationBar({ allocation }: AllocationBarProps) {
           <span
             data-testid={`allocation-current-${key}`}
             className="mono"
-            style={{ fontSize: 11, color: currentPct !== null ? 'var(--text)' : 'var(--text-muted)' }}
+            style={{ fontSize: 12, color: currentPct !== null ? 'var(--text)' : 'var(--text-muted)' }}
           >
             {currentPct !== null ? formatPct(currentPct) : '—'}
           </span>
-          <span className="mono" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--text-dim)' }}>
             / {targetPct}%
           </span>
         </div>

@@ -18,7 +18,7 @@ export function DemoBadge() {
         background:     'var(--orange)',
         color:          '#000',
         fontFamily:     'var(--mono)',
-        fontSize:       '11px',
+        fontSize:       '12px',
         fontWeight:     600,
         letterSpacing:  '0.08em',
         textTransform:  'uppercase',
