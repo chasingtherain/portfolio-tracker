@@ -1,3 +1,44 @@
+# Implementation Notes
+
+---
+
+## Phase 1 — Scaffolding
+
+### What was built
+- Next.js 15 app bootstrapped with `create-next-app` (App Router, TypeScript, no Tailwind, no ESLint)
+- `@vercel/kv` installed for later persistence work
+- Vitest configured as the test runner with jsdom and React Testing Library
+- `next.config.ts` set up with CSP headers and security defaults from the spec
+- `app/globals.css` replaced with the full design system — CSS variables, fonts, scanline overlay, skeleton animation, responsive grid utilities
+- `components/` and `lib/` directories created (empty, ready for Phase 2+)
+- `tests/setup.test.ts` smoke test verifying runner, TypeScript, and jsdom
+
+### Engineering decisions
+
+**Why Vitest over Jest?**
+Jest predates native ES modules and TypeScript — it requires Babel transforms and config to work with modern Next.js. Vitest is built for the current ecosystem (uses Vite under the hood), needs almost no config, and has the same `describe/it/expect` API as Jest. Switching later would cost near-zero because the test syntax is identical.
+
+**Why jsdom?**
+Vitest runs in Node.js, which has no browser APIs. jsdom simulates a browser DOM inside Node so tests can interact with HTML elements, check if things render, and use browser globals like `document` and `window`. Without it, any test touching the DOM would throw "document is not defined".
+
+**Why a separate `vitest.setup.ts`?**
+The setup file imports `@testing-library/jest-dom`, which adds extra matchers like `toBeInTheDocument()` and `toHaveTextContent()`. Without it, those matchers aren't available in tests. Putting it in a separate file (rather than inline) keeps the config clean and makes it easy to add more global setup later.
+
+**Why CSS variables for the entire design system?**
+Hard-coding hex values in components creates maintenance problems — if you want to tweak `--orange`, you'd have to find every component that uses it. CSS variables are a single source of truth. Changing one variable cascades everywhere. This is the same DRY principle applied to styling.
+
+**Why `body::before` for the scanline effect?**
+The scanline texture is a purely cosmetic overlay. Using `::before` with `pointer-events: none` and `position: fixed; z-index: 9999` means it floats above all content visually but never intercepts clicks or interaction. No JavaScript, no extra elements in the component tree — pure CSS.
+
+**The git history incident**
+`create-next-app` won't scaffold into a directory containing unknown files, and it always runs `git init` internally. Scaffolding into a temp directory and copying files across is the correct workaround — but the copy overwrote `.git`, replacing our history with the scaffold's empty history. Fixed by: deleting the bad `.git`, re-initialising, pointing to the GitHub remote, and `git reset --soft origin/main` to restore the HEAD pointer without touching the working tree. Lesson: always scaffold into an empty directory and copy in, never copy out a `.git` folder.
+
+### Patterns encountered
+- **Environment-driven configuration** — the same codebase runs as demo or live purely based on environment variables, no code branching at deploy time
+- **Security headers at the framework level** — CSP, X-Frame-Options, and X-Content-Type-Options are configured once in `next.config.ts` and applied to every route automatically. No per-route configuration needed.
+
+---
+
 # What is CLAUDE.md and Why Does It Look Like This?
 
 This document explains the engineering thinking behind the `CLAUDE.md` file in this project — what it is, why it exists, and why each section is structured the way it is.
