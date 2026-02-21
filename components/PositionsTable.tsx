@@ -26,7 +26,8 @@ export function PositionsTable({ positions }: PositionsTableProps) {
     <div className="panel" data-testid="positions-table">
       <div className="panel-title">POSITIONS</div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="table-scroll">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th style={{ ...TH_STYLE, textAlign: 'left'  }}>ASSET</th>
@@ -106,7 +107,8 @@ export function PositionsTable({ positions }: PositionsTableProps) {
             )
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   )
 }

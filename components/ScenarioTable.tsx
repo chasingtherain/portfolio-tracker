@@ -28,6 +28,7 @@ export function ScenarioTable() {
     <div className="panel" data-testid="scenario-table">
       <div className="panel-title">SCENARIO PROJECTIONS</div>
 
+      <div className="table-scroll">
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
@@ -97,6 +98,7 @@ export function ScenarioTable() {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

@@ -32,7 +32,8 @@ export function ExitLadder({ btcPrice, proceedsSplit }: ExitLadderProps) {
     <div className="panel" data-testid="exit-ladder">
       <div className="panel-title">EXIT LADDER</div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+      <div className="table-scroll">
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
         <thead>
           <tr>
             <th style={TH}> </th>
@@ -107,7 +108,8 @@ export function ExitLadder({ btcPrice, proceedsSplit }: ExitLadderProps) {
             )
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
 
       {/* Proceeds split — current BTC zone → cash/BTC reinvestment split */}
       <div

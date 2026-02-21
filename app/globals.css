@@ -92,6 +92,50 @@ body::before {
   gap: 16px;
 }
 
+/* Stat bar: 4 equal columns (StatBar component + skeleton) */
+.grid-stat-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* Bottom row: 3 equal columns (TriggerMonitor / ExitLadder / ScenarioTable + skeleton) */
+.grid-bottom {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Interactive row: Checklist + EditHoldingsPanel (live) or Checklist alone (demo) */
+.grid-interactive {
+  display: grid;
+  gap: 16px;
+}
+.grid-interactive--live { grid-template-columns: 300px 1fr; }
+.grid-interactive--demo { grid-template-columns: 300px; }
+
+/* Phase indicator: 4 equal segments (PhaseIndicator component) */
+.grid-phase-segments {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+/* 2-column field grid inside EditHoldingsPanel (DRY POWDER + NUPL) */
+.grid-fields-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border2);
+}
+
+/* Table scroll wrapper — allows horizontal scroll on narrow screens */
+.table-scroll {
+  overflow-x: auto;
+}
+
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -186,7 +230,34 @@ body::before {
 
 /* Responsive — single column below 768px */
 @media (max-width: 768px) {
+  /* Two-column split: positions + allocations */
   .grid-60-40 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stat cards — collapse to 2×2 (still shows all 4 without squishing) */
+  .grid-stat-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Bottom row — stack vertically */
+  .grid-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  /* Interactive row — stack vertically regardless of live/demo */
+  .grid-interactive--live,
+  .grid-interactive--demo {
+    grid-template-columns: 1fr;
+  }
+
+  /* Phase indicator — collapse to 2×2 (labels too wide for 4-across) */
+  .grid-phase-segments {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* EditHoldingsPanel 2-col field grid — stack vertically on narrow screens */
+  .grid-fields-2 {
     grid-template-columns: 1fr;
   }
 }

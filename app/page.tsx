@@ -27,7 +27,7 @@ function SkeletonLayout() {
   return (
     <div className="container dashboard">
       {/* Stat bar row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="grid-stat-bar">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="skeleton panel" style={{ height: 80 }} />
         ))}
@@ -40,13 +40,13 @@ function SkeletonLayout() {
         <div className="skeleton panel" style={{ height: 280 }} />
       </div>
       {/* Bottom panels */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div className="grid-bottom">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="skeleton panel" style={{ height: 200 }} />
         ))}
       </div>
       {/* Interactive panels */}
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
+      <div className="grid-interactive grid-interactive--live">
         <div className="skeleton panel" style={{ height: 260 }} />
         <div className="skeleton panel" style={{ height: 260 }} />
       </div>
@@ -156,7 +156,7 @@ export default function Page() {
             <PositionsTable positions={portfolioState.positions} />
             <AllocationBars allocations={portfolioState.allocations} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div className="grid-bottom">
             <TriggerMonitor triggers={portfolioState.triggers} />
             <ExitLadder
               btcPrice={portfolioState.prices.btc}
@@ -169,11 +169,11 @@ export default function Page() {
               Checklist — always shown (demo uses local state, live uses KV)
               EditHoldingsPanel — absent from DOM entirely in demo mode (CLAUDE.md invariant) */}
           <div
-            style={{
-              display:             'grid',
-              gridTemplateColumns: portfolioState.mode !== 'demo' ? '300px 1fr' : '300px',
-              gap:                  16,
-            }}
+            className={`grid-interactive ${
+              portfolioState.mode !== 'demo'
+                ? 'grid-interactive--live'
+                : 'grid-interactive--demo'
+            }`}
           >
             <Checklist mode={portfolioState.mode} savedAt={holdingsSavedAt} />
             {portfolioState.mode !== 'demo' && (

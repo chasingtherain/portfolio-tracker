@@ -53,7 +53,7 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
   return (
     <div
       data-testid="stat-bar"
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}
+      className="grid-stat-bar"
     >
       {/* Total portfolio value */}
       <StatCard label="TOTAL VALUE">

@@ -48,7 +48,7 @@ export function PhaseIndicator({ btcPrice }: PhaseIndicatorProps) {
   return (
     <div
       data-testid="phase-indicator"
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}
+      className="grid-phase-segments"
     >
       {ZONES.map((z, i) => {
         const state: SegmentState =
