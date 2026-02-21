@@ -14,6 +14,9 @@ import { ExitLadder } from '@/components/ExitLadder'
 import { ScenarioTable } from '@/components/ScenarioTable'
 import { Checklist } from '@/components/Checklist'
 import { EditHoldingsPanel } from '@/components/EditHoldingsPanel'
+import { PriceWarningBanner } from '@/components/PriceWarningBanner'
+import { KvFallbackBanner } from '@/components/KvFallbackBanner'
+import { ErrorToast } from '@/components/ErrorToast'
 
 // ---------------------------------------------------------------------------
 // Skeleton — shown on initial load only
@@ -67,6 +70,11 @@ export default function Page() {
   // Used by Header to show a loading state on the refresh button.
   const [isRefreshing, setIsRefreshing] = useState(false)
 
+  // refreshError: true when the most recent manual refresh failed.
+  // Cleared on the next successful fetch. Only set for refresh failures —
+  // initial load failure leaves portfolioState null (no data to preserve).
+  const [refreshError, setRefreshError] = useState(false)
+
   // holdingsSavedAt: epoch ms, updated when EditHoldingsPanel saves successfully.
   // Passed to Checklist so it re-fetches the KV-reset state after a holdings write.
   const [holdingsSavedAt, setHoldingsSavedAt] = useState(0)
@@ -78,10 +86,14 @@ export default function Page() {
 
     try {
       const res = await fetch('/api/portfolio')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data: PortfolioState = await res.json()
       setPortfolioState(data)
+      setRefreshError(false)
     } catch {
-      // Error states handled in Phase 10
+      // Only flag an error for refresh — initial load failure leaves the page empty,
+      // but there's no "last known good" data to warn the user about losing.
+      if (isRefresh) setRefreshError(true)
     } finally {
       if (isRefresh) {
         setIsRefreshing(false)
@@ -120,14 +132,19 @@ export default function Page() {
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
       />
+      {refreshError && (
+        <ErrorToast onDismiss={() => setRefreshError(false)} />
+      )}
       {portfolioState && (
         <>
+          <KvFallbackBanner kvFallback={portfolioState.kvFallback} />
           <StatBar
             totalValue={portfolioState.totalValue}
             gapToTarget={portfolioState.gapToTarget}
             btcPrice={portfolioState.prices.btc}
             fearGreed={portfolioState.prices.fearGreed}
           />
+          <PriceWarningBanner pricesPartial={portfolioState.pricesPartial} />
           <ProgressBar
             totalValue={portfolioState.totalValue}
             target={portfolioState.target}

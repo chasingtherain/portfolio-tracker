@@ -2,6 +2,50 @@
 
 ---
 
+## Phase 10 — Error states + polish
+
+### What was built
+- `components/PriceWarningBanner.tsx` — inline banner shown immediately below StatBar when `portfolioState.pricesPartial = true`. Absent from the DOM entirely when `false` (same `return null` pattern as DemoBadge). Explains the ⚠ icons visible in the positions table.
+- `components/KvFallbackBanner.tsx` — shown when `portfolioState.kvFallback = true`, meaning KV returned no stored holdings and `DEFAULT_HOLDINGS` (all zeros) was used. Prompts the user to open EditHoldingsPanel. Placed above StatBar so it's the first thing a new user sees.
+- `components/ErrorToast.tsx` — fixed bottom-right toast for manual refresh failures. Auto-dismisses via `setTimeout` in a `useEffect` after 4 seconds. Has `role="alert"` for screen-reader accessibility. Cleanup function cancels the timer on unmount to avoid calling `onDismiss` after the component is gone.
+- `lib/types.ts` — added `kvFallback: boolean` to `PortfolioState`.
+- `lib/demo-data.ts` — added `kvFallback: false` (demo mode never touches KV).
+- `app/api/portfolio/route.ts` — sets `kvFallback = holdings.updatedAt === new Date(0).toISOString()`. The epoch-zero sentinel in `DEFAULT_HOLDINGS` is the detection mechanism.
+- `app/page.tsx` — `refreshError` state (bool), filled catch block (`!res.ok` throws before JSON parse), `setRefreshError(false)` on success, renders `ErrorToast` outside the `portfolioState &&` gate (no data needed to show a fetch failure), renders `KvFallbackBanner` and `PriceWarningBanner` inside the gate.
+- `app/globals.css` — `.banner`, `.banner-warning`, `.banner-info`, `.toast`, `.toast-error` classes.
+- `tests/error-states.test.tsx` — 17 tests covering all three components.
+
+372/372 tests passing.
+
+### Engineering decisions
+
+**Why `kvFallback` is detected from `updatedAt`, not a separate flag from `getHoldings`**
+`getHoldings` already returns `DEFAULT_HOLDINGS` (which has `updatedAt` at epoch zero) when KV has nothing stored. Rather than changing `getHoldings` to return a `{ holdings, fallback }` tuple (more complex type) or adding a second KV call, we read the sentinel that's already there. `new Date(0).toISOString()` is `'1970-01-01T00:00:00.000Z'` — unambiguous, easy to test, and costs nothing extra. The comment in the portfolio route makes the intent explicit for future readers.
+
+**Why KvFallbackBanner is outside the `portfolioState.mode === 'demo'` check**
+It's inside `{portfolioState && ...}`, which means demo mode can reach it. But `DEMO_PORTFOLIO_STATE` has `kvFallback: false`, so it never renders in demo mode. The invariant is enforced by the data, not by a conditional — same design as `PriceWarningBanner`. Neither banner has any demo/live branching logic inside it.
+
+**Why ErrorToast is outside `{portfolioState && ...}`**
+A refresh failure doesn't change `portfolioState` — the previous successful state stays visible (that's the whole point of the one-way `isInitialLoading` gate). If the toast were inside the `portfolioState &&` block it would only appear when data exists, which is fine most of the time — but if the *first* fetch fails and `portfolioState` is null, you'd never see the toast anyway. Keeping the toast outside the gate makes it structurally independent: it's only about the fetch state (`refreshError`), not the data state.
+
+**Why the toast only fires on refresh failure, not initial load failure**
+On initial load, if the fetch fails: `portfolioState` stays `null`, `isInitialLoading` goes `false`, and the page renders without any data panels. There's nothing useful on screen to warn the user about losing. A toast saying "refresh failed" would be confusing — no refresh was triggered, and the user may not understand there even was a fetch attempt. The right fix for initial load failures is a dedicated "failed to load" state with a retry button — a clear Phase 11+ extension if needed.
+
+**Why `!res.ok` throws before `res.json()`**
+`fetch` only rejects its promise on network-level failures (no connection, DNS failure, CORS). A server returning HTTP 500 or 503 resolves normally — `res.json()` would parse whatever error body the server returned and `setPortfolioState` would receive garbage. Adding `if (!res.ok) throw new Error(...)` ensures any non-2xx response is treated as a failure and routes to the catch block, where `setRefreshError(true)` fires.
+
+**Why the auto-dismiss timer cleanup matters**
+If the user navigates away (or in test: `unmount()` is called) before the 4-second timer fires, React would attempt to call `onDismiss` — which calls `setRefreshError(false)` on an unmounted component. In development this produces a React warning; in older React versions it was an error. The `return () => clearTimeout(timer)` cleanup in `useEffect` cancels the timer on unmount, preventing the call. The test `"does not call onDismiss if the component unmounts before 4 seconds"` explicitly verifies this.
+
+### Patterns encountered
+- **Sentinel-based detection** — epoch zero in `updatedAt` as the KV-fallback signal; no new fields or complex return types needed
+- **Data-enforced invariants** — `kvFallback: false` in demo data ensures the banner never appears in demo mode without any conditional inside the component
+- **`!res.ok` before `.json()`** — the correct pattern for treating HTTP error responses as failures; `fetch` alone only rejects on network errors
+- **Effect cleanup for timers** — `clearTimeout` in the useEffect cleanup prevents post-unmount state updates; tested explicitly with an unmount-before-timeout scenario
+- **Toast outside the data gate** — refresh failure is orthogonal to whether data exists; keeping it structurally separate reflects that
+
+---
+
 ## Phase 9 — Interactive panels
 
 ### What was built

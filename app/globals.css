@@ -145,6 +145,45 @@ body::before {
   animation: spin 0.8s linear infinite;
 }
 
+/* Banners — inline alerts below StatBar or at top of data section */
+.banner {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.banner-warning {
+  background: var(--yellow-dim);
+  border: 1px solid var(--yellow);
+  color: var(--yellow);
+}
+
+.banner-info {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text-muted);
+}
+
+/* Toast — fixed bottom-right, rendered above all content */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast-error {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
 /* Responsive — single column below 768px */
 @media (max-width: 768px) {
   .grid-60-40 {

@@ -61,6 +61,11 @@ export async function GET(): Promise<Response> {
   const { fetchedAt: _f, ...priceValues } = prices
   const pricesPartial = Object.values(priceValues).some(v => v === null)
 
+  // kvFallback: true when KV returned no stored holdings and DEFAULT_HOLDINGS was used.
+  // The epoch-zero sentinel (1970-01-01T00:00:00.000Z) is set by DEFAULT_HOLDINGS.updatedAt
+  // and is replaced by a real timestamp on every successful holdings write.
+  const kvFallback = holdings.updatedAt === new Date(0).toISOString()
+
   const state: PortfolioState = {
     mode:        'live',
     totalValue,
@@ -76,6 +81,7 @@ export async function GET(): Promise<Response> {
     prices,
     updatedAt:   holdings.updatedAt,
     pricesPartial,
+    kvFallback,
   }
 
   return Response.json(state)

@@ -108,4 +108,5 @@ export interface PortfolioState {
   prices: Prices
   updatedAt: string // from holdings.updatedAt
   pricesPartial: boolean // true if any price source returned null
+  kvFallback: boolean    // true if KV had no stored holdings (DEFAULT_HOLDINGS was used)
 }

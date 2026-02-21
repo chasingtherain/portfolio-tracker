@@ -32,6 +32,7 @@ export const DEMO_PORTFOLIO_STATE: PortfolioState = {
   progressPct: 46.09,
   updatedAt: '2025-01-15T09:45:00.000Z',
   pricesPartial: false,
+  kvFallback: false,
 
   prices: {
     btc:           97500,
