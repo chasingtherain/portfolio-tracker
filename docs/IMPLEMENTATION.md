@@ -2,6 +2,41 @@
 
 ---
 
+## Phase 5 — Shell UI
+
+### What was built
+- `app/layout.tsx` — stripped Geist font imports (design system uses IBM Plex via globals.css), set metadata
+- `app/page.tsx` — Client Component owning `portfolioState`, `isInitialLoading`, `isRefreshing` state; skeleton on initial load only; placeholder sections for Phases 6–9
+- `components/DemoBadge.tsx` — renders only when `NEXT_PUBLIC_IS_DEMO === 'true'`; `return null` (not CSS hidden) when absent
+- `components/Header.tsx` — title, formatted timestamp, stale indicator (>10 min), refresh button with disabled state during refresh
+- `tests/components.test.tsx` — 16 tests covering DemoBadge presence/absence, Header structure, timestamp format, stale detection at exact boundary, button interaction
+
+223/223 tests passing.
+
+### Engineering decisions
+
+**Why `isInitialLoading` is a separate boolean, not derived from `portfolioState === null`**
+`portfolioState` is also null after a failed refresh (Phase 10 will handle that). If we used `portfolioState === null` to gate the skeleton, a failed refresh would re-show the skeleton and wipe out the "last known good" data — a bad user experience. The separate `isInitialLoading` boolean starts true, transitions to false after the first fetch (success or failure), and never goes back. This is a deliberate one-way state transition.
+
+**Why `DemoBadge` uses `return null` instead of conditional CSS**
+CLAUDE.md is explicit: "absent from the DOM in demo mode — not hidden with CSS, not rendered at all." A `display: none` element is still in the DOM and can be inspected. `return null` in React produces no DOM element at all. The test for this verifies `container.innerHTML === ''` — not just invisible, but genuinely absent.
+
+**Why timestamp formatting is inside `Header.tsx` rather than in `formatters.ts`**
+`formatters.ts` handles financial display (currency, percentages, P&L). Timestamps are a different concern — they format a date/time string for UI display, not a number. Mixing them would make `formatters.ts` multi-purpose. The `formatTime` helper is local to Header because it's only used there and doesn't belong in the financial formatting module.
+
+**Why `NEXT_PUBLIC_IS_DEMO` is readable in tests despite being a Next.js build-time variable**
+In production Next.js, `NEXT_PUBLIC_` variables are replaced with literal values at build time by the webpack plugin. In Vitest (Vite), we bypass the Next.js compiler entirely — `process.env.NEXT_PUBLIC_IS_DEMO` is just a regular env var access at runtime. `vi.stubEnv('NEXT_PUBLIC_IS_DEMO', 'true')` works because it patches `process.env` before the component renders.
+
+**The stale detection boundary test**
+Stale is defined as `> STALE_THRESHOLD_MS` (strictly greater than). The test at exactly 10 minutes (600,000 ms) verifies the indicator is absent — this catches an off-by-one error in the `>` vs `>=` comparison. `vi.useFakeTimers()` + `vi.setSystemTime()` pins `Date.now()` so the test result doesn't depend on wall clock time.
+
+### Patterns encountered
+- **One-way state transition** — `isInitialLoading` goes false exactly once and never returns; this models "first-load gate" cleanly
+- **Absent vs. invisible** — `return null` vs. `display: none` is a meaningful architectural distinction when the invariant requires DOM absence
+- **Pinning system time in tests** — `vi.setSystemTime()` before render makes time-dependent components deterministic
+
+---
+
 ## Phase 4 — API routes
 
 ### What was built
