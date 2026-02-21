@@ -7,6 +7,8 @@ import { Header } from '@/components/Header'
 import { StatBar } from '@/components/StatBar'
 import { ProgressBar } from '@/components/ProgressBar'
 import { PhaseIndicator } from '@/components/PhaseIndicator'
+import { PositionsTable } from '@/components/PositionsTable'
+import { AllocationBars } from '@/components/AllocationBars'
 
 // ---------------------------------------------------------------------------
 // Skeleton — shown on initial load only
@@ -112,9 +114,12 @@ export default function Page() {
             gapToTarget={portfolioState.gapToTarget}
           />
           <PhaseIndicator btcPrice={portfolioState.prices.btc} />
+          <div className="grid-60-40">
+            <PositionsTable positions={portfolioState.positions} />
+            <AllocationBars allocations={portfolioState.allocations} />
+          </div>
         </>
       )}
-      {/* Phase 7: PositionsTable, AllocationBars */}
       {/* Phase 8: TriggerMonitor, ExitLadder, ScenarioTable */}
       {/* Phase 9: Checklist, EditHoldingsPanel */}
     </div>

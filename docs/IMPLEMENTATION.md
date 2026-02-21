@@ -2,6 +2,41 @@
 
 ---
 
+## Phase 7 — Middle panels
+
+### What was built
+- `components/PositionsTable.tsx` — table of all positions sorted by value descending. Shows label, ticker, value, alloc%, P&L, P&L%. P&L is colour-coded (green/red/muted). `priceUnavailable` rows show a ⚠ icon on the value cell and `—` for all derived fields. Dry powder (USD) has null P&L — shows `—` without a ⚠ because its price is not unavailable.
+- `components/AllocationBars.tsx` — horizontal bar per asset. Each bar shows: asset label, OW/UW badge (orange for overweight, muted for underweight), current% and target% labels, a coloured fill and a 2px target tick. Fill capped at 100% when overweight beyond the track. Tick hidden when targetPct is 0 (NEAR, ETH — zero target, not tracked).
+- `app/page.tsx` — added the 60/40 grid (`<PositionsTable>` + `<AllocationBars>`) below PhaseIndicator.
+- `tests/middle-panels.test.tsx` — 30 tests covering both components: normal data, negative P&L, null P&L (dry powder), priceUnavailable, zero quantity, OW/UW labels, fill width, tick presence, null currentPct.
+
+293/293 tests passing.
+
+### Engineering decisions
+
+**Why PositionsTable uses `priceUnavailable` rather than checking `value === null`**
+Both unavailable positions (`priceUnavailable: true`) and dry powder (`pnl: null`) have `null` in some fields. Using `priceUnavailable` is the correct discriminant: it explicitly signals "the API returned no price for this asset" vs. "this is cash which has no P&L by design". Checking `value === null` would be ambiguous — dry powder has a real non-null value. The `priceUnavailable` flag was designed for exactly this purpose.
+
+**Why the ⚠ icon is on the value cell, not a separate column**
+A separate "status" column would add visual noise for normal rows (the common case). Inline ⚠ in the value cell puts the warning where the user's eye is already scanning, and is the established pattern from the StatBar. The `data-testid="position-unavailable-{ticker}"` attribute gives tests a clean hook without relying on the icon character.
+
+**Why OW is orange and UW is muted (not red/green)**
+OW/UW describe allocation drift — neither is inherently good or bad. Being overweight in BTC means it's outperforming, which is fine and expected. Orange is attention-worthy (consistent with the theme) rather than alarm-coloured. Green for OW would misleadingly imply you should stay overweight; red for UW would imply it's an error. Muted for UW reads as "informational, not urgent". The bar length vs. tick position communicates the actual magnitude more precisely than any colour label.
+
+**Why the target tick is hidden when `targetPct === 0`**
+NEAR and ETH have 0% target allocation — they're legacy positions being wound down, not actively managed. Rendering a tick at position 0 (the left edge of the bar) would be visually confusing. Hiding the tick when `targetPct === 0` is the cleaner signal: no tick means "no target for this asset".
+
+**The `$0.0000` formatter test correction**
+A test initially asserted `getByText('$0')` for a zero-value position. `formatCurrency(0)` returns `$0.0000` because 0 falls below the `< 1` threshold (4dp rule). The test comment was wrong. The formatter is correct — this is the same precision rule applied to sub-$1 assets like ONDO. Additionally, `formatPnl(0)` also returns `$0.0000` (no sign for exactly 0), so both the value and P&L cells show the same string, requiring `getAllByText` instead of `getByText`.
+
+### Patterns encountered
+- **Explicit flag over null check** — `priceUnavailable` is a boolean flag on Position for a reason; using it is more readable and intent-revealing than checking field nullability
+- **`data-testid` on icons** — `position-unavailable-{ticker}` lets tests check warning presence without matching unicode characters
+- **Absolute-positioned fill + tick** — both the bar fill and the target tick are `position: absolute` inside a `position: relative` track; this avoids layout flow interference between the two layers
+- **Colour semantics** — OW/UW use attention-coloured orange and neutral muted rather than the "positive/negative" green/red pattern, because overweight is not inherently bad
+
+---
+
 ## Phase 6 — Top panels
 
 ### What was built
