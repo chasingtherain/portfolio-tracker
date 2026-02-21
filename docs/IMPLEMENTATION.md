@@ -2,6 +2,48 @@
 
 ---
 
+## Phase 4 — API routes
+
+### What was built
+- `app/api/prices/route.ts` — fetches CoinGecko (prices + global), Finnhub (MSTR), Alternative.me (Fear & Greed). Exports `fetchPrices()` for direct import.
+- `app/api/portfolio/route.ts` — demo mode returns `DEMO_PORTFOLIO_STATE`; live mode fetches prices + holdings, runs full two-pass calculation pipeline, returns `PortfolioState`
+- `app/api/holdings/route.ts` — GET strips cost basis via `toClientHoldings()`; PUT validates body, rate-limits via KV, checks password, writes holdings, resets checklist
+- `app/api/checklist/route.ts` — GET + PUT, returns 404 in demo mode
+- `tests/api-prices.test.ts` — 11 tests (happy path, each source failing independently, Finnhub 0 edge case)
+- `tests/api-portfolio.test.ts` — 21 tests (demo mode, live mode, null prices, default holdings)
+- `tests/api-holdings.test.ts` — 23 tests (auth, validation, rate limiting, write mechanics)
+- `tests/api-checklist.test.ts` — 14 tests (demo mode 404, live mode GET/PUT, validation)
+
+207/207 tests passing.
+
+### Engineering decisions
+
+**Why `Promise.allSettled` instead of `Promise.all` in `fetchPrices`**
+`Promise.all` rejects the entire call if any one fetch fails — one down API (CoinGecko, Finnhub, or Alternative.me) would make the whole prices route fail. `Promise.allSettled` runs all four to completion and we inspect only the fulfilled ones. This implements the "null price handling" invariant at the source: each price field is independently nullable, and a failed source contributes `null` rather than an error.
+
+**Why `fetchPrices` is a named export on the prices route**
+The portfolio route needs market data. Calling `/api/prices` over HTTP from inside `/api/portfolio` is an internal HTTP round-trip — unreliable on Vercel because both routes might be on different serverless function instances, and you'd pay network latency inside a single logical operation. Exporting `fetchPrices()` as a regular function makes the import a direct in-process call. This is the "no internal HTTP calls between routes" invariant from CLAUDE.md.
+
+**Why `PORTFOLIO_TARGET` is hardcoded in the portfolio route**
+The portfolio target value (1,000,000) is a strategic constant, not user-configurable data. It's not in `Holdings` because it doesn't change per-write. For a personal tool, one line in one file is the right amount of indirection. If it becomes configurable in the future, it can be added to `Holdings` then.
+
+**How the two-pass position build works in the portfolio route**
+`buildPositions` can't compute `allocPct` for any position because it needs `totalValue`, which requires all positions to be built first. The portfolio route orchestrates the two passes: call `buildPositions` → call `calcTotalValue` → loop over positions to fill in `allocPct`. This keeps the calculation functions pure (they don't call each other) and the orchestration in one place.
+
+**Why the missing-password case returns 400, not 401**
+The route runs validation before authentication. `validateBody` checks `typeof b.password === 'string'` — if the field is absent, the body is structurally invalid, so 400 (bad request) is returned before reaching the password comparison. A body missing a required field is a malformed request, not an authentication failure. The test was initially written expecting 401, which revealed this distinction. The test was corrected to expect 400 and the behaviour is documented in the test description.
+
+**Rate limit design trade-off**
+The current rate limiter resets the TTL window on every request (by passing `ex: 900` on every `kv.set`). A sliding window would use `kv.incr` + `kv.expire` (set expiry only on first request). The current design is simpler and acceptable for a single-user personal tool where the limit (5/15min) is generous enough that the window reset is irrelevant in practice.
+
+### Patterns encountered
+- **`Promise.allSettled` for fault-tolerant parallel fetches** — each data source fails independently rather than taking down the whole route
+- **Direct function import vs. internal HTTP** — exporting `fetchPrices()` as a function is the correct architectural pattern for calling logic from another route in serverless environments
+- **Validation before authentication** — the order matters: schema validation (400) runs before credential checking (401). A test failure revealed this ordering and prompted documenting the behaviour explicitly.
+- **Server-stamped timestamps** — `updatedAt` is set by the server in the PUT handler, not accepted from the client body. Clients cannot forge timestamps.
+
+---
+
 ## Phase 2 — Core library (pure functions)
 
 ### What was built
