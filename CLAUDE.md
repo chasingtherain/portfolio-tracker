@@ -11,6 +11,26 @@ This is a learning project. Jay is building engineering skills alongside buildin
 
 Do not silently write code. Narrate the reasoning.
 
+## Testing and Commit Rules
+
+Every phase ends with tests. The commit only happens if all tests pass.
+
+**Test workflow per phase:**
+1. Write the phase's code
+2. Write tests covering the phase's logic
+3. Run the tests — `npm test`
+4. Fix any failures before committing
+5. Commit only when the test suite is green
+
+**What to test per phase:**
+- **Pure logic (calculations, formatters):** Unit tests for every function — happy path, edge cases, null inputs
+- **API routes:** Integration tests using Next.js test utilities — test response shape, status codes, error handling
+- **Components:** Rendering tests — correct output for given props, null/unavailable price states, demo vs live mode differences
+
+**Test framework:** Vitest — lighter than Jest, native TypeScript support, compatible with Next.js App Router. Install in Phase 1 scaffolding.
+
+**Never commit a failing test.** If a test is genuinely wrong (testing the wrong thing), fix the test and explain why before committing.
+
 ---
 
 ## Project Overview
