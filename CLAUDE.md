@@ -31,6 +31,14 @@ Every phase ends with tests. The commit only happens if all tests pass.
 
 **Never commit a failing test.** If a test is genuinely wrong (testing the wrong thing), fix the test and explain why before committing.
 
+After each phase, update `docs/IMPLEMENTATION.md` with:
+- What was built in this phase
+- Key engineering decisions made and why
+- Any patterns or principles that came up in practice
+- Anything that differed from the plan and why
+
+This keeps the learning record current and makes the commit history meaningful beyond just the code.
+
 ---
 
 ## Project Overview
