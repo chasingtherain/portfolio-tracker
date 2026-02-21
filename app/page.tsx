@@ -12,6 +12,8 @@ import { AllocationBars } from '@/components/AllocationBars'
 import { TriggerMonitor } from '@/components/TriggerMonitor'
 import { ExitLadder } from '@/components/ExitLadder'
 import { ScenarioTable } from '@/components/ScenarioTable'
+import { Checklist } from '@/components/Checklist'
+import { EditHoldingsPanel } from '@/components/EditHoldingsPanel'
 
 // ---------------------------------------------------------------------------
 // Skeleton — shown on initial load only
@@ -40,6 +42,11 @@ function SkeletonLayout() {
           <div key={i} className="skeleton panel" style={{ height: 200 }} />
         ))}
       </div>
+      {/* Interactive panels */}
+      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
+        <div className="skeleton panel" style={{ height: 260 }} />
+        <div className="skeleton panel" style={{ height: 260 }} />
+      </div>
     </div>
   )
 }
@@ -59,6 +66,10 @@ export default function Page() {
   // isRefreshing: true while a manual refresh is in-flight.
   // Used by Header to show a loading state on the refresh button.
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // holdingsSavedAt: epoch ms, updated when EditHoldingsPanel saves successfully.
+  // Passed to Checklist so it re-fetches the KV-reset state after a holdings write.
+  const [holdingsSavedAt, setHoldingsSavedAt] = useState(0)
 
   const fetchPortfolio = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -86,6 +97,13 @@ export default function Page() {
   }, [fetchPortfolio])
 
   const handleRefresh = useCallback(() => {
+    fetchPortfolio(true)
+  }, [fetchPortfolio])
+
+  // Called by EditHoldingsPanel after a successful save.
+  // Updates holdingsSavedAt (triggers Checklist re-fetch) and refreshes portfolio data.
+  const handleHoldingsSaved = useCallback(() => {
+    setHoldingsSavedAt(Date.now())
     fetchPortfolio(true)
   }, [fetchPortfolio])
 
@@ -129,9 +147,24 @@ export default function Page() {
             />
             <ScenarioTable />
           </div>
+
+          {/* Interactive panels:
+              Checklist — always shown (demo uses local state, live uses KV)
+              EditHoldingsPanel — absent from DOM entirely in demo mode (CLAUDE.md invariant) */}
+          <div
+            style={{
+              display:             'grid',
+              gridTemplateColumns: portfolioState.mode !== 'demo' ? '300px 1fr' : '300px',
+              gap:                  16,
+            }}
+          >
+            <Checklist mode={portfolioState.mode} savedAt={holdingsSavedAt} />
+            {portfolioState.mode !== 'demo' && (
+              <EditHoldingsPanel onHoldingsSaved={handleHoldingsSaved} />
+            )}
+          </div>
         </>
       )}
-      {/* Phase 9: Checklist, EditHoldingsPanel */}
     </div>
   )
 }

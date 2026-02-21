@@ -2,6 +2,45 @@
 
 ---
 
+## Phase 9 — Interactive panels
+
+### What was built
+- `components/Checklist.tsx` — 8 pre-trade review items. In demo mode: local React state only, no API calls. In live mode: GET `/api/checklist` on mount to load KV state; PUT on each toggle to persist immediately. `savedAt` prop dependency in the useEffect means any change to `savedAt` (triggered by a holdings save in page.tsx) fires a re-fetch, pulling the server-reset state. Progress counter in the header ("3 / 8").
+- `components/EditHoldingsPanel.tsx` — collapsible form for all 7 assets (qty + cost basis), dry powder, NUPL, and password. Fetches GET `/api/holdings` on mount to pre-populate qty fields; costBasis is absent from the API response (security boundary) and must be entered manually. The panel content is hidden with `display: none` (not conditionally unmounted) so the password field survives open/close cycles. Calls `onHoldingsSaved()` after a successful PUT.
+- `app/page.tsx` — added `holdingsSavedAt` state (epoch ms, starts 0); `handleHoldingsSaved` sets it to `Date.now()` and triggers a portfolio refresh. Checklist receives `mode` and `savedAt`; EditHoldingsPanel is absent from the DOM entirely when `portfolioState.mode === 'demo'`.
+- `tests/interactive-panels.test.tsx` — 25 tests: Checklist demo mode (structure + interaction + no-fetch assertion), Checklist live mode (initial fetch + toggle persistence + savedAt re-fetch), EditHoldingsPanel structure/toggle/password retention/pre-population/save/error, and one page-level test verifying EditHoldingsPanel is absent from the DOM when mode is 'demo'.
+
+355/355 tests passing.
+
+### Engineering decisions
+
+**Why Checklist uses `savedAt` as a dependency instead of a reset callback**
+The Checklist needs to re-fetch after a holdings save because the server resets the KV checklist. One approach: EditHoldingsPanel calls a `onChecklistReset` callback that Checklist receives. But this creates a direct coupling: EditHoldingsPanel would need to know Checklist exists. Instead, page.tsx mediates: it owns `holdingsSavedAt` state, passes it to Checklist, and the Checklist's `useEffect` re-fires when it changes. Neither component knows about the other. This is the **mediator pattern** — a parent coordinates between children without them coupling to each other.
+
+**Why `display:none` instead of conditional rendering for collapse**
+`{isOpen && <form>}` is the idiomatic React pattern for hiding content — but it unmounts the form component on close and remounts it on open, which resets all React state. The password field would be cleared every time the panel closes. `style={{ display: isOpen ? 'block' : 'none' }}` hides the element visually but keeps it mounted — React state persists across open/close cycles. CLAUDE.md uses this distinction explicitly for DemoBadge ("absent from DOM, not hidden with CSS"). Here the *opposite* is the right choice: we *want* state to persist, so we use CSS hiding, not DOM absence.
+
+**Why cost basis is not pre-populated**
+`GET /api/holdings` returns `ClientHoldings` — qty fields only, no costBasis. This is the security boundary enforced by `toClientHoldings()` in kv.ts. The user must re-enter costBasis each session. For a single-user personal tool this is acceptable — cost basis rarely changes (it represents average buy price, updated only when adding new positions). An alternative would be to store costBasis in the browser's localStorage (never hitting the server), but that's Phase 10+ territory.
+
+**Why EditHoldingsPanel makes no assumption about live/demo mode**
+The component doesn't receive a `mode` prop and contains no demo/live branching. It's unconditionally rendered for live mode and unconditionally absent in demo mode — page.tsx's conditional rendering `portfolioState.mode !== 'demo' && <EditHoldingsPanel />` is the only gate. This keeps the component pure: it does one thing (edit holdings) without knowing about the demo/live concept. The demo exclusion invariant is enforced at the call site (page.tsx), not inside the component.
+
+**The `act()` warning and its fix**
+EditHoldingsPanel's `useEffect` fetches `/api/holdings` asynchronously on mount. Tests that rendered the component synchronously completed before the fetch mock resolved — React then warned about an unmounted state update outside of `act()`. The fix: a `renderPanel()` helper that renders the component AND awaits `waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))`. This drains the async effect before any test assertion runs. The helper also serves as an implicit assertion (the initial fetch was made), making it doubly useful.
+
+**Why the page-level demo test uses DEMO_PORTFOLIO_STATE**
+Testing "EditHoldingsPanel absent in demo mode" at the component level is impossible — the component doesn't know about demo mode. At the page level, we mock `fetch` to return `DEMO_PORTFOLIO_STATE` (mode: 'demo'), wait for portfolio load, and then assert `queryByTestId('edit-holdings-panel')` returns null. This tests the actual invariant: the component is absent from the real DOM in demo conditions, not just that some boolean is set correctly.
+
+### Patterns encountered
+- **Mediator pattern** — page.tsx coordinates Checklist and EditHoldingsPanel without them coupling directly
+- **CSS hiding vs. DOM absence** — `display:none` preserves state; conditional rendering destroys it. The right choice depends on whether state survival is required
+- **Pure component by exclusion** — EditHoldingsPanel contains no demo/live logic; the call site (page.tsx) enforces the invariant
+- **`renderPanel()` helper** — a test helper that renders *and* awaits async effects; both convenient and self-documenting
+- **vi.stubGlobal for fetch** — first use of fetch mocking in this test suite; `vi.stubGlobal` + `afterEach(() => vi.unstubAllGlobals())` is the clean pair
+
+---
+
 ## Phase 8 — Bottom panels
 
 ### What was built
