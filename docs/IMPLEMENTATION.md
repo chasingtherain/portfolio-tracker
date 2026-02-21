@@ -2,6 +2,45 @@
 
 ---
 
+## Phase 8 — Bottom panels
+
+### What was built
+- `components/TriggerMonitor.tsx` — 4 trigger cards in a vertical stack. Each card shows label, current value, status text, and the condition string. A left-border accent coloured by severity (`watch` → border, `near` → yellow-dim, `fired` → orange-dim, `warn` → red-dim) gives an immediate visual read. Value and status text use the full `severityColor` (brighter). `data-severity` attribute on each card exposes state for tests without inspecting CSS variables (which don't compute in jsdom).
+- `components/ExitLadder.tsx` — table of 5 hardcoded tranches (T1–T5: $150K → $350K). Each row shows target price, sell %, and a distance column. Distance is `formatPct(distance, true)` → "+X.X%"; when `btcPrice >= tranche.price` the cell is replaced with a "✓ HIT" span (`data-testid="tranche-hit-{label}"`). When `btcPrice` is null, `formatPct(null, true)` naturally returns "—". Below the table, a ProceedsSplit sub-section shows the current zone label and cash/BTC split percentages from `proceedsSplit` props.
+- `components/ScenarioTable.tsx` — fully static 5-row projection table. Hardcoded BTC price scenarios ($100K → $350K) with estimated portfolio values and a "vs $1M" column using `formatPnl`. The target row (first scenario crossing $1M — $250K) carries `data-target="true"` and gets an orange left-border + faint tint. Takes no props.
+- `app/page.tsx` — wired the three components in a `repeat(3, 1fr)` grid matching the existing skeleton layout.
+- `tests/bottom-panels.test.tsx` — 37 tests covering all three components: severity attributes, card content, all `✓ HIT` combinations (none/partial/all), boundary condition (BTC exactly at tranche price), null price, proceeds split values, target row identification, and "vs $1M" sign correctness.
+
+330/330 tests passing.
+
+### Engineering decisions
+
+**Why TriggerMonitor uses `data-severity` rather than checking colour**
+CSS custom properties (`var(--orange)`, `var(--yellow)`) are not computed in jsdom — `getComputedStyle` returns the variable name, not the resolved colour. `data-severity` is a plain string attribute that tests can assert directly. This is the same pattern used in StatBar's `data-severity` attribute. It also decouples the test from the visual design: if the colour for "fired" changes from orange to red, the test doesn't break because it never knew about the colour.
+
+**Why ExitLadder's tranches are hardcoded in the component, not in calculations.ts**
+The tranches are strategic exit plan constants — they don't change with market conditions, and they don't need to be tested by the calculations test suite. They're analogous to `PORTFOLIO_TARGET` in the portfolio route: a business constant that lives close to where it's used. If the exit strategy changes, you update one array in one file. Putting them in `calculations.ts` would pull them into the calculation pipeline with no benefit — nothing computes over them.
+
+**Why `formatPct(distance, true)` handles the null case "for free"**
+The distance is `null` when `btcPrice` is null (since we can't compute a ratio without a current price). `formatPct(null, true)` returns `'—'` regardless of the `showSign` flag. This means the null-price display requires no extra conditional in the JSX — the formatter already handles it. The `showSign = true` only affects non-null values. This is the payoff of formatters returning `'—'` for null: the calling code doesn't need if/else for the unavailable case.
+
+**Why ScenarioTable takes no props**
+The projection values are completely hardcoded estimates — they don't recompute from live holdings. Making the component accept `btcPrice` or `holdings` props would imply dynamic computation that isn't happening. No props signals to the reader: "this component has no runtime dependencies, it's a static planning reference." The `data-target` attribute on the $250K row makes the target visually and programmatically identifiable without requiring the component to receive any target value as a prop.
+
+**Why the target row uses `data-target="true"` rather than a CSS class**
+A CSS class like `.target-row` would still work for tests via `toHaveClass`, but `data-target="true"` is more semantically explicit — it's not just styling, it's declaring the row's role. Tests can assert `not.toHaveAttribute('data-target')` for non-target rows, which is unambiguous. It also follows the existing pattern (`data-severity`, `data-state` in PhaseIndicator) of using `data-*` attributes to expose component state.
+
+**Boundary test: BTC exactly at tranche price**
+The `✓ HIT` condition is `btcPrice >= tranche.price` (inclusive). The test at `btcPrice = 150_000` exactly (T1's price) verifies the boundary is `>=` not `>`. This catches an off-by-one if someone writes `>` instead. The same pattern was used in Phase 5 for the stale detection boundary (strict `>` vs `>=`).
+
+### Patterns encountered
+- **`data-*` as testable state contracts** — third occurrence after `data-severity` (StatBar) and `data-state` (PhaseIndicator); now also `data-target` (ScenarioTable)
+- **Formatters handling null "for free"** — `formatPct(null, true)` → `'—'` removes the need for a null branch in JSX
+- **No-props static component** — `ScenarioTable` with zero props signals "no runtime dependencies, purely a reference panel"
+- **Hardcoded constants near their use site** — tranches in `ExitLadder.tsx`, projections in `ScenarioTable.tsx`, both following the `PORTFOLIO_TARGET` precedent from the portfolio route
+
+---
+
 ## Phase 7 — Middle panels
 
 ### What was built
