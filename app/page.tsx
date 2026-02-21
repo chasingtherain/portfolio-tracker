@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import type { PortfolioState } from '@/lib/types'
 import { DemoBadge } from '@/components/DemoBadge'
 import { Header } from '@/components/Header'
+import { StatBar } from '@/components/StatBar'
+import { ProgressBar } from '@/components/ProgressBar'
+import { PhaseIndicator } from '@/components/PhaseIndicator'
 
 // ---------------------------------------------------------------------------
 // Skeleton — shown on initial load only
@@ -94,7 +97,23 @@ export default function Page() {
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
       />
-      {/* Phase 6: StatBar, ProgressBar, PhaseIndicator */}
+      {portfolioState && (
+        <>
+          <StatBar
+            totalValue={portfolioState.totalValue}
+            gapToTarget={portfolioState.gapToTarget}
+            btcPrice={portfolioState.prices.btc}
+            fearGreed={portfolioState.prices.fearGreed}
+          />
+          <ProgressBar
+            totalValue={portfolioState.totalValue}
+            target={portfolioState.target}
+            progressPct={portfolioState.progressPct}
+            gapToTarget={portfolioState.gapToTarget}
+          />
+          <PhaseIndicator btcPrice={portfolioState.prices.btc} />
+        </>
+      )}
       {/* Phase 7: PositionsTable, AllocationBars */}
       {/* Phase 8: TriggerMonitor, ExitLadder, ScenarioTable */}
       {/* Phase 9: Checklist, EditHoldingsPanel */}

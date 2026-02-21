@@ -2,6 +2,39 @@
 
 ---
 
+## Phase 6 — Top panels
+
+### What was built
+- `components/StatBar.tsx` — 4 stat cards: TOTAL VALUE, VS TARGET, BTC, FEAR & GREED. Fear & Greed is colour-coded by value (green/yellow/orange/red) with a `data-severity` attribute for test assertions. Gap display adds an explicit `+` prefix for values above target.
+- `components/ProgressBar.tsx` — orange fill bar capped at 100% display width, showing totalValue, target, progressPct, and gap-to-target with sign.
+- `components/PhaseIndicator.tsx` — 4 BTC price zone segments (ACCUMULATE / DISTRIBUTE / REDUCE / EXIT). Derives the active zone via `calcProceedsSplit`, assigning each segment a `data-state` of `completed`, `active`, `future`, or `unknown` (when price is null).
+- `app/page.tsx` — wired all three components into the portfolio state render path; they receive their props from `portfolioState` directly.
+- `tests/top-panels.test.tsx` — 40 tests covering all three components: normal data, null prices, edge values (progress > 100%, gap sign, F&G at each severity boundary, BTC zone boundaries, all segments unknown when null).
+
+263/263 tests passing.
+
+### Engineering decisions
+
+**Why PhaseIndicator derives zone from `calcProceedsSplit` rather than duplicating thresholds**
+PhaseIndicator needs to know which BTC price zone is currently active. The zone boundaries are already defined in `calcProceedsSplit` in `calculations.ts`. Duplicating those thresholds in the component would violate the single-source-of-truth principle — if the boundaries changed, both places would need updating and could drift. Instead, `calcProceedsSplit(btcPrice).zone` is called and the result is matched against the `ZONES` array. The component can't have stale boundaries.
+
+**Why the bar fill is capped in the component as well as in `calcProgressToTarget`**
+`calcProgressToTarget` caps progress at 100 by design. The component also applies `Math.min(progressPct, 100)` defensively in case callers ever pass raw uncapped values (e.g. during testing or if the source changes). This is belt-and-suspenders: the component is correct regardless of where its props come from. The label still shows the real percentage so the user can see they've exceeded the target.
+
+**Why `data-severity` is a separate attribute instead of relying on colour**
+Tests that check "the fear & greed indicator is in the 'fired' state" shouldn't have to know what colour `var(--red)` resolves to in jsdom — CSS custom properties aren't computed in a test environment anyway. `data-severity` is a plain string attribute that's easy to assert. This is a general pattern: use `data-*` attributes to expose component state for testing, and let CSS react to those attributes (or use them independently). The component and test agree on the contract without needing to inspect styles.
+
+**Why Fear & Greed thresholds in StatBar match `evalFearGreed` in calculations.ts**
+The stat bar colours the index with the same thresholds as the trigger evaluator (≥80=fired, ≥65=near, ≥50=caution, else watch). If they diverged, the stat bar might show orange while the trigger monitor shows green — a confusing inconsistency. The comment in `StatBar.tsx` calls this out explicitly. This is the dependency-at-a-distance problem: two separate places implement the same rule, and if one is updated without the other, they silently disagree. In a larger codebase the fix would be to export the thresholds as a constant; here, the comment is sufficient given the small scope.
+
+### Patterns encountered
+- **Single source of truth for thresholds** — zone boundaries live once in `calcProceedsSplit`; the component reads the output rather than re-implementing the logic
+- **Defensive capping in the component** — belt-and-suspenders: `Math.min` in the component even when the source already caps, because components should be correct regardless of prop source
+- **`data-*` attributes as testable state contracts** — exposes component state in a way tests can assert without inspecting CSS or implementation details
+- **Segment state as a derived value** — `completed / active / future / unknown` is computed from `activeIndex`, not stored — pure derivation from props, no internal state
+
+---
+
 ## Phase 5 — Shell UI
 
 ### What was built
