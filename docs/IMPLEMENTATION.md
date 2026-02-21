@@ -41,6 +41,42 @@ This follows the spec's null-price handling rules. If a data source is down, the
 
 ---
 
+## Phase 3 — Data layer
+
+### What was built
+- `lib/types.ts` — added `ChecklistState = boolean[]`
+- `lib/kv.ts` — KV read/write helpers: `getHoldings`, `setHoldings`, `getChecklist`, `setChecklist`, `resetChecklist`, `toClientHoldings`, `DEFAULT_HOLDINGS`
+- `lib/demo-data.ts` — complete static `PortfolioState` for demo mode, with synthetic but internally consistent numbers
+- `tests/kv.test.ts` — 18 tests covering all kv.ts exports, with `@vercel/kv` fully mocked
+- `tests/demo-data.test.ts` — 38 tests validating shape, ordering, semantic correctness, and mathematical consistency of the demo data
+
+138/138 tests passing.
+
+### Engineering decisions
+
+**Why `toClientHoldings` lives in kv.ts, not a shared utils file**
+It's the exit point of the same security boundary that `getHoldings` guards at the entry point. Both live in kv.ts so the server-side/client-side boundary is visible in one file — a reader can see the full journey: KV → `Holdings` (with cost basis) → `toClientHoldings()` → `ClientHoldings` (safe for response). Scattering this across files would obscure where the boundary actually is.
+
+**Why `DEFAULT_HOLDINGS.updatedAt` uses epoch zero**
+`new Date(0).toISOString()` (`'1970-01-01T00:00:00.000Z'`) is a sentinel: it unambiguously means "never updated". Any real write will produce a more recent timestamp. API routes can detect uninitialised state without a separate `isInitialised` flag, keeping the type simple.
+
+**Why demo data is hand-crafted, not derived from the calculation functions**
+Using `buildPositions`, `calcTotalValue`, etc. to generate demo data would create a dependency: if a calculation function has a bug, demo mode would silently reproduce it. Static data is independently verifiable — the test suite confirms both its shape (structure, types) and semantics (sort order, sum to 100%, zone match). The numbers were manually computed and documented in the file header, making them auditable.
+
+**Why `ChecklistState = boolean[]` rather than a keyed object**
+The 8 checklist items are ordered and rendered as a list. An array maps directly to that structure. A keyed object (`{ step1: boolean, ... }`) would require the UI to know both the keys and the display order — two pieces of information instead of one. The trade-off is that the keys are positional (implicit order), but since the items are fixed and never rearranged, this is acceptable.
+
+**How vi.mock hoisting works for the KV tests**
+Vitest hoists `vi.mock()` calls above all `import` statements via its Vite transform plugin. This means even though `vi.mock('@vercel/kv', ...)` appears after the imports in source, it runs *before* any module is evaluated. When `kv.ts` is first imported in the test, `@vercel/kv` is already mocked — so `kv.get` and `kv.set` are `vi.fn()` stubs throughout. This is the standard pattern for mocking third-party modules with side effects (network, file I/O, credentials).
+
+### Patterns encountered
+- **Security boundary as co-location** — `toClientHoldings` paired with `getHoldings`/`setHoldings` in one file makes the data flow and stripping logic visible together
+- **Sentinel values** — epoch zero as "never set", distinct from `null` (unknown) or `undefined` (missing)
+- **Static data for correctness isolation** — demo data doesn't depend on the calculation pipeline, so it can serve as a reference even if calculations contain bugs
+- **vi.mock hoisting** — Vitest's hoist transform makes module-level mocks reliable for async/stateful third-party modules
+
+---
+
 ## Phase 1 — Scaffolding
 
 ### What was built

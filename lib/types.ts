@@ -88,6 +88,9 @@ export interface ProceedsSplit {
   btcPct: number
 }
 
+// 8-item boolean array — one entry per checklist item, persisted to KV in live mode
+export type ChecklistState = boolean[]
+
 // PortfolioState is the full computed response from /api/portfolio.
 // It contains NO raw cost basis figures — only derived values safe for the client.
 export interface PortfolioState {
