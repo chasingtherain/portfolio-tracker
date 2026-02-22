@@ -198,6 +198,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
       >
         <form onSubmit={handleSubmit}>
           {/* Asset rows */}
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
             <thead>
               <tr>
@@ -243,18 +244,10 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Non-asset fields */}
-          <div
-            style={{
-              display:             'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap:                  8,
-              marginBottom:         16,
-              paddingTop:           12,
-              borderTop:           '1px solid var(--border2)',
-            }}
-          >
+          <div className="grid-fields-2">
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span className="mono" style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.06em' }}>
                 DRY POWDER ($)

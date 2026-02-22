@@ -2,6 +2,44 @@
 
 ---
 
+## Phase 11 — Mobile layout
+
+### What was built
+- `app/globals.css` — extracted all inline grid definitions into named CSS classes (`grid-stat-bar`, `grid-bottom`, `grid-interactive`, `grid-interactive--live`, `grid-interactive--demo`, `grid-phase-segments`, `grid-fields-2`) and added a `table-scroll` wrapper class (`overflow-x: auto`). Added a full `@media (max-width: 768px)` block that collapses every grid to single-column (or 2×2 where appropriate).
+- `app/page.tsx` — replaced three sets of inline `style={{ display: 'grid', ... }}` objects (stat bar skeleton, bottom panels skeleton, interactive panels skeleton and live layout) with the new CSS class names.
+- `components/StatBar.tsx` — swapped inline grid style for `className="grid-stat-bar"`.
+- `components/PhaseIndicator.tsx` — swapped inline grid style for `className="grid-phase-segments"`.
+- `components/PositionsTable.tsx` — wrapped the positions `<table>` in `<div className="table-scroll">` for horizontal scroll on narrow screens.
+- `components/ExitLadder.tsx` — wrapped the tranches `<table>` in `<div className="table-scroll">`.
+- `components/ScenarioTable.tsx` — wrapped the scenarios `<table>` in `<div className="table-scroll">`.
+
+372/372 tests passing.
+
+### Engineering decisions
+
+**Why move inline grid styles to CSS classes at all**
+The inline `style` prop approach works but has a critical limitation: you cannot write media queries inside a `style` attribute. To make grids responsive, you need a CSS rule with a `@media` block — and that can only live in a stylesheet. So the refactor from `style={{ display: 'grid', ... }}` to `className="grid-stat-bar"` wasn't just tidiness — it was a prerequisite for mobile breakpoints. This is the **separation of concerns** principle applied to layout: structural decisions (how many columns, what gap) belong in CSS, not inline JSX.
+
+**Why the breakpoint is 768px**
+768px is the conventional iPad portrait width and a widely-used industry threshold for "tablet/mobile". Below it, multi-column panels like the stat bar (4 cards) and bottom panels (3 cards) become too narrow to be readable. Single-column stacking at this point lets each panel use the full width, which works well on phones and portrait tablets.
+
+**Why stat bar collapses to 2×2 rather than 1 column**
+The 4 stat cards are short — about 80px each. Stacking them 1×4 would produce a very long scroll to reach the rest of the dashboard. A 2×2 grid keeps them compact and visible together, which is the right behaviour for a "summary at a glance" component. The bottom panels (TriggerMonitor, ExitLadder, ScenarioTable) stack 1×3 because they're taller and more content-dense — squeezing them 2×2 would be cramped.
+
+**Why `table-scroll` is a wrapper div rather than a style on the table itself**
+`overflow-x: auto` on a `<table>` element is ignored by most browsers — tables don't scroll. The scroll behaviour must be on a block-level wrapper. The pattern is always: `<div style="overflow-x: auto"><table ...></table></div>`. Naming it `.table-scroll` makes the intent self-documenting and keeps it consistent across the three tables that need it.
+
+**Why `grid-interactive--live` and `grid-interactive--demo` are modifier classes**
+The interactive row has two valid layouts: `300px 1fr` (live, with EditHoldingsPanel) or `300px` (demo, Checklist only). Both share the base `grid-interactive` class (which sets `display: grid` and `gap: 16px`), and the modifier adds only the `grid-template-columns` rule. In the media query, a single rule targets both modifiers: `.grid-interactive--live, .grid-interactive--demo { grid-template-columns: 1fr }`. This is the **BEM modifier pattern** — base class carries shared rules, modifier carries only what differs.
+
+### Patterns encountered
+- **CSS classes as a prerequisite for media queries** — inline styles cannot be responsive; the refactor to class names was required, not optional, for mobile support
+- **BEM modifier pattern** — base class + modifier class separates shared layout rules from variant rules
+- **2×2 vs 1×N collapse** — short, summary components collapse to 2 columns on mobile; tall, detail components stack to 1 column
+- **`overflow-x: auto` on a wrapper** — tables require a block-level parent to scroll horizontally; the pattern is consistent across all three table components
+
+---
+
 ## Phase 10 — Error states + polish
 
 ### What was built
