@@ -57,8 +57,12 @@ export function toClientHoldings(holdings: Holdings): ClientHoldings {
 // ---------------------------------------------------------------------------
 
 export async function getHoldings(): Promise<Holdings> {
-  const stored = await kv.get<Holdings>(KV_HOLDINGS_KEY)
-  return stored ?? DEFAULT_HOLDINGS
+  try {
+    const stored = await kv.get<Holdings>(KV_HOLDINGS_KEY)
+    return stored ?? DEFAULT_HOLDINGS
+  } catch {
+    return DEFAULT_HOLDINGS
+  }
 }
 
 export async function setHoldings(holdings: Holdings): Promise<void> {
