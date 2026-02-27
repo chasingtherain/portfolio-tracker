@@ -16,9 +16,9 @@ import {
   calcProceedsSplit,
 } from '@/lib/calculations'
 
-// The portfolio value target. Hardcoded as a business constant — changing this
-// means editing one line, which is acceptable for a single-user personal tool.
-const PORTFOLIO_TARGET = 1_000_000
+// The portfolio value target. Read from PORTFOLIO_TARGET env var (set in Vercel),
+// falling back to 1,000,000 if not set.
+const PORTFOLIO_TARGET = parseInt(process.env.PORTFOLIO_TARGET ?? '1000000', 10)
 
 export async function GET(): Promise<Response> {
   // Demo mode: fully static, zero external API calls, zero KV reads
