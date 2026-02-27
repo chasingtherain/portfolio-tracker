@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false)
   const router = useRouter()
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError('')
@@ -49,17 +49,9 @@ export default function LoginPage() {
           fontSize:       11,
           letterSpacing: '0.12em',
           color:         'var(--orange)',
-          marginBottom:   4,
+          marginBottom:   32,
         }}>
-          JAY&apos;S PORTFOLIO TRACKER
-        </div>
-        <div style={{
-          fontFamily:  'var(--mono)',
-          fontSize:     10,
-          color:       'var(--text-dim)',
-          marginBottom: 32,
-        }}>
-          $1.5M TARGET · DEC 2030
+          PORTFOLIO TRACKER
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
