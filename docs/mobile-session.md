@@ -1,58 +1,63 @@
-# Mobile Session — One-Time Use, 5-Minute Expiry
+# Mobile Session — 5-Minute Expiry
 
-## What you're building
+## Intent
 
-A lightweight session layer for mobile write requests. On desktop, the existing
-flow is unchanged: the password travels inline with every PUT to `/api/holdings`.
-On mobile, a two-step flow replaces it:
+On mobile, the entire session — both dashboard access and write
+authentication — expires after 5 minutes. On desktop, nothing changes.
 
-1. User authenticates with their password → server issues a short-lived session token
-2. User submits holdings with that token → token is consumed (one-time use) and deleted
+Two independent mechanisms enforce this:
 
-This prevents a picked-up phone from being used to make a second edit after the
-owner has already saved — the token is destroyed server-side on first use.
+1. **Dashboard cookie** (`POST /api/auth`) — issues a `Max-Age=300` cookie
+   on mobile. When it expires, the next page load redirects to `/login`.
+2. **Write token** (`POST /api/session` → `PUT /api/holdings`) — a one-time-use
+   KV token with a 300s TTL. Consumed server-side on first use; a second
+   attempt with the same token gets a 401.
+
+Together they mean a picked-up phone:
+- Can't view the dashboard after 5 minutes (cookie expired → `/login`)
+- Can't replay a prior save (token already consumed)
+- Can't submit a new save without re-entering the password (token is gone)
 
 ---
 
 ## What this feature does and does not do
 
-**Does:** After a successful save on mobile, the session token is consumed. Any
-attempt to replay that exact submission (same token) will get a 401. A new save
-requires the user to tap Save again, which triggers a fresh token issuance.
+**Dashboard access:** Expires 5 minutes after login on mobile. The browser
+stops sending the cookie; the middleware finds nothing and redirects to `/login`.
+The clock starts at login — there is no sliding window or activity-based renewal.
 
-**Does not:** Log the user out or clear their password from the form after a
-period of inactivity. The password lives in React component state — it persists
-for as long as the browser tab stays open, regardless of how much time passes.
-A user who leaves for 2 hours and returns to the same open tab will find their
-password still in the form field and can save again normally.
+**Write tokens:** One-time-use. Consumed the moment a successful save is
+submitted. A new save requires tapping Save again, which issues a fresh token.
+The 5-minute TTL on the KV token is a safety net for network failures — in the
+happy path the token is created and consumed within milliseconds.
 
-If clearing the password after idle time is desired, that is a separate feature:
-a client-side idle timer that calls `setForm(prev => ({ ...prev, password: '' }))`
-after N minutes of no interaction. That is not implemented here.
+**Password in form state:** After a successful mobile save the password field
+is cleared from React state. If the page is still open when the cookie expires
+and the user is redirected to `/login`, they re-authenticate there — not inside
+the Edit Holdings panel.
 
 ---
 
-## Why a separate session layer, not just a shorter password TTL
+## Why two separate mechanisms
 
-The current model has no session state at all — the password is submitted on
-every write and validated synchronously. That's fine for desktop, where the risk
-of a hijacked browser tab is low. On mobile the threat model is different:
-physical access. One-use token destruction limits the blast radius of that access
-(a grabbed phone cannot replay a prior save) without adding full auth
-infrastructure (cookies, JWTs, refresh tokens) that would be overkill for a
-single-user personal tool.
+The cookie and the write token guard different things:
 
-The 5-minute TTL on the KV token is a safety net, not the primary security
-mechanism. In the happy path the token is created and consumed within
-milliseconds — the TTL only matters if step 2 (the holdings write) never
-arrives due to a network drop or browser crash, preventing a dangling orphan
-token from sitting in KV indefinitely.
+| Concern | Mechanism |
+|---|---|
+| Viewing the dashboard | `portfolio-auth` cookie, checked by middleware on every request |
+| Submitting a holdings write | One-time KV token, checked by `PUT /api/holdings` |
+
+A short cookie alone would expire the dashboard but leave the write endpoint
+exposed to anyone who knew the password and made a direct API call. The write
+token ensures that even a direct `PUT /api/holdings` request requires a fresh
+credential exchange on every save.
 
 ---
 
 ## Mobile detection
 
-Detection is server-side, via the `User-Agent` request header.
+All detection is server-side via the `User-Agent` request header. The same
+function is used in both `/api/auth` and `/api/session`:
 
 ```ts
 function isMobileUA(ua: string | null): boolean {
@@ -61,36 +66,35 @@ function isMobileUA(ua: string | null): boolean {
 }
 ```
 
-Server-side UA sniffing is used (not viewport width) because:
-- Viewport is a client-side concept — unavailable in API routes
-- It keeps the logic in one place, in the route handler
-- A determined attacker could spoof either; UA is sufficient for a personal tool
+If UA is absent or ambiguous, desktop behaviour applies — fail open rather than
+locking the user out.
 
-If UA is absent or ambiguous, default to desktop flow (fail open rather than
-locking the user out).
+`EditHoldingsPanel.tsx` also uses `window.innerWidth < 768` client-side to decide
+which submit path to run. This is a separate check, used only to adapt the UI
+flow — it is not a security boundary.
 
 ---
 
-## Session token model
+## Dashboard cookie — `POST /api/auth`
 
-| Property | Value |
+| Device | `Max-Age` |
 |---|---|
-| Generator | `crypto.randomUUID()` — built into Node.js 18+, no deps |
-| KV key | `session:<token>` |
-| KV value | `1` — presence alone is the signal; no metadata needed |
-| TTL | 300 seconds (5 minutes) — set via KV `ex` option |
-| Destruction | `kv.del('session:<token>')` immediately on first use |
+| Mobile (UA detected) | 300 seconds (5 minutes) |
+| Desktop / UA absent | 604800 seconds (7 days) |
 
-The token is opaque to the client — it's just a UUID string. The client stores
-it in component state only; it is never written to localStorage or cookies.
+No other cookie attributes change. `HttpOnly`, `SameSite=Strict`, and `Secure`
+(in production) apply to both.
+
+When the mobile cookie expires the browser silently drops it. The next request
+to any route hits the middleware, finds no `portfolio-auth` cookie, and redirects
+to `/login`. No client-side code is involved.
 
 ---
 
-## API changes
+## Write token — `POST /api/session`
 
-### New: `POST /api/session`
-
-Issues a session token. Mobile only.
+Issues a one-time KV token. Mobile only — desktop clients use the inline
+password path on `PUT /api/holdings` directly.
 
 **Request body:**
 ```json
@@ -98,31 +102,19 @@ Issues a session token. Mobile only.
 ```
 
 **Logic:**
-1. Read `User-Agent` — if not mobile, return `403 Desktop clients use inline password auth`
-2. Validate password (plain text, same as existing `PUT /api/holdings` logic)
-3. If wrong password → `401 Unauthorized`
+1. Read `User-Agent` — if not mobile → `403`
+2. Rate-limit by IP (same 5/15-min window as `/api/holdings`)
+3. Validate password → `401` on mismatch
 4. Generate token: `crypto.randomUUID()`
 5. `kv.set('session:<token>', 1, { ex: 300 })`
 6. Return `{ token }`
 
-**Reuses existing rate-limiting pattern:** same `ratelimit:<ip>` key and 5/15-min
-window — no new KV keys needed for rate limiting.
-
 ---
 
-### Modified: `PUT /api/holdings`
+## Modified: `PUT /api/holdings`
 
-Accepts either auth mode. The presence of `token` vs `password` in the body
-determines which path runs.
-
-**Updated body shape (union):**
-```ts
-// Desktop (unchanged)
-{ password: string; btc: ...; mstr: ...; ... }
-
-// Mobile
-{ token: string; btc: ...; mstr: ...; ... }
-```
+Accepts either auth mode. `validateBody()` enforces XOR — exactly one of
+`password` or `token` must be present; both or neither is a 400.
 
 **Mobile auth path (token present):**
 1. `const exists = await kv.get('session:<token>')`
@@ -134,42 +126,27 @@ determines which path runs.
 - Plain text comparison as before
 - No KV session lookup
 
-`validateBody()` is updated to accept either `password` or `token` (not both,
-not neither). The rest of the handler (validation, holdings write, checklist
-reset) is untouched.
-
 ---
 
-## Client-side changes — `EditHoldingsPanel.tsx`
+## Client-side flow — `EditHoldingsPanel.tsx`
 
-On mount, detect mobile using `window.innerWidth < 768` (client-side viewport —
-distinct from the server-side UA check, used only to adapt the UI flow).
+`window.innerWidth < 768` inside `handleSubmit` determines which path runs:
 
-```ts
-const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-```
+**Desktop:** Single `PUT /api/holdings` with `{ password, ...holdingFields }`.
 
-The two auth flows diverge only inside `handleSubmit`:
-
-**Desktop (unchanged):**
-Builds body with `password` field and POSTs directly to `PUT /api/holdings`.
-
-**Mobile:**
+**Mobile — two-step:**
 ```
 1. POST /api/session  { password }
-   → on error: show error, stop
-   → on success: receive token
+   → error: show message, stop
+   → success: receive token
 
 2. PUT /api/holdings  { token, ...holdingFields }
-   → success / error handling same as existing flow
+   → error: show message, stop
+   → success: clear password from state, trigger refresh
 ```
 
-After a successful mobile save, clear `form.password` from state — the token is
-already consumed server-side, so retaining the password in state offers no
-benefit and is a minor hygiene improvement.
-
-**No new UI chrome needed.** The user experience is identical — they type
-their password and tap Save. The two-step handshake is invisible.
+The two-step handshake is invisible to the user — they type their password and
+tap Save exactly as before.
 
 ---
 
@@ -177,11 +154,12 @@ their password and tap Save. The two-step handshake is invisible.
 
 | File | Change |
 |---|---|
-| `app/api/session/route.ts` | New. POST handler: validate password, issue token |
-| `app/api/holdings/route.ts` | Modified. `validateBody` accepts token or password; mobile auth path added |
-| `components/EditHoldingsPanel.tsx` | Modified. Two-step submit on mobile |
-
-No new dependencies. No new environment variables. No schema migrations.
+| `app/api/auth/route.ts` | Modified. 5-min `Max-Age` cookie when UA is mobile |
+| `app/api/session/route.ts` | New. POST handler: mobile gate, rate limit, issue KV token |
+| `app/api/holdings/route.ts` | Modified. `validateBody` accepts token XOR password; mobile token path added |
+| `components/EditHoldingsPanel.tsx` | Modified. Two-step submit on mobile; clears password on success |
+| `tests/api-auth.test.ts` | New. 10 tests — cookie lifetime by UA |
+| `tests/api-session.test.ts` | New. 13 tests — mobile detection, auth, rate limiting |
 
 ---
 
@@ -189,29 +167,18 @@ No new dependencies. No new environment variables. No schema migrations.
 
 | Key | TTL | Purpose |
 |---|---|---|
-| `session:<uuid>` | 300s | One-time-use mobile session token |
+| `session:<uuid>` | 300s | One-time-use mobile write token |
 
 ---
 
 ## Constraints
 
-- Desktop write flow is completely unchanged — no regressions possible there
-- Do not use cookies or `Set-Cookie` headers — this project has no cookie infrastructure
-- Do not use localStorage — session tokens should not survive a page reload
-- `crypto.randomUUID()` requires Node.js 18+ — already guaranteed by `export const runtime = 'nodejs'` on all routes
+- Desktop flows are completely unchanged — cookie lifetime, write path, no regressions
+- Session tokens are not stored client-side (no localStorage, no additional cookies)
+  — they live in React state only for the milliseconds between step 1 and step 2
+- `crypto.randomUUID()` is available natively — no new dependencies
 - If `POST /api/session` succeeds but `PUT /api/holdings` fails, the token is
-  already consumed. The user must re-authenticate. This is acceptable: the failure
-  modes (network drop, validation error) are rare and the retry cost is low
-- Rate limiting applies to `POST /api/session` using the same KV pattern as holdings
-
----
-
-## Implementation order
-
-1. `app/api/session/route.ts` — new POST handler
-2. `app/api/holdings/route.ts` — update `validateBody`, add mobile token path
-3. `components/EditHoldingsPanel.tsx` — two-step submit on mobile
-4. Tests:
-   - `POST /api/session`: wrong password → 401, desktop UA → 403, mobile UA + correct password → 200 with token
-   - `PUT /api/holdings` mobile path: valid token → 200 + token deleted, expired/used token → 401, token used twice → 401 on second
-   - `PUT /api/holdings` desktop path: existing tests unchanged
+  consumed and the user must re-enter their password to try again — acceptable,
+  since this failure path is rare and the retry cost is low
+- The 5-minute dashboard cookie has no sliding window — it expires from the
+  moment of login, not from last activity
