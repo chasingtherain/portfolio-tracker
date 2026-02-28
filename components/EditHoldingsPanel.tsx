@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ClientHoldings } from '@/lib/types'
 
 type AssetKey = 'btc' | 'mstr' | 'near' | 'uni' | 'link' | 'ondo' | 'eth'
@@ -80,6 +80,12 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [error,    setError]    = useState<string | null>(null)
 
+  // Tracks the qty values last loaded from the server.
+  // Used by logDecisions to detect which assets actually changed.
+  const serverQty = useRef<Record<AssetKey, number>>({
+    btc: 0, mstr: 0, near: 0, uni: 0, link: 0, ondo: 0, eth: 0,
+  })
+
   // Pre-populate qty fields from KV on mount.
   // costBasis is server-side only and never returned — user enters it manually.
   // password is not in the response — user enters it once and it persists in state.
@@ -87,6 +93,15 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
     fetch('/api/holdings')
       .then((r) => r.json())
       .then((data: ClientHoldings) => {
+        serverQty.current = {
+          btc:  data.btc.qty,
+          mstr: data.mstr.qty,
+          near: data.near.qty,
+          uni:  data.uni.qty,
+          link: data.link.qty,
+          ondo: data.ondo.qty,
+          eth:  data.eth.qty,
+        }
         setForm((prev) => ({
           ...prev,
           assets: {
@@ -147,11 +162,45 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
         return
       }
 
+      // Log a decision entry for each asset whose qty changed.
+      // We compare qty against what was pre-populated from the server on mount.
+      // Fire-and-forget: decision logging failures must never block the save flow.
+      void logDecisions(body)
+
       onHoldingsSaved()
     } catch {
       setError('Connection error — save failed')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function logDecisions(saved: Record<AssetKey, { qty: number }>) {
+    try {
+      const assetKeys: AssetKey[] = ['btc', 'mstr', 'near', 'uni', 'link', 'ondo', 'eth']
+      await Promise.allSettled(
+        assetKeys.map(async (key) => {
+          const priorQty = serverQty.current[key] || 0
+          const newQty   = saved[key].qty || 0
+
+          if (priorQty === newQty) return  // no change — nothing to log
+
+          const action: 'buy' | 'sell' = newQty > priorQty ? 'buy' : 'sell'
+
+          await fetch('/api/decisions', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              asset:        key.toUpperCase(),
+              action,
+              amountBefore: priorQty,
+              amountAfter:  newQty,
+            }),
+          })
+        })
+      )
+    } catch {
+      // Swallow — decision logging is best-effort
     }
   }
 

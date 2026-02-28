@@ -92,10 +92,10 @@ body::before {
   gap: 16px;
 }
 
-/* Stat bar: 4 equal columns (StatBar component + skeleton) */
+/* Stat bar: 5 equal columns (StatBar + AdherenceScoreCard + skeleton) */
 .grid-stat-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 

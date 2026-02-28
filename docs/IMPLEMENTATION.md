@@ -2,6 +2,37 @@
 
 ---
 
+## Decision Journal & Strategy Adherence Score
+
+### What was built
+- `lib/decisions.types.ts` — types for `DecisionEntry`, `MarketSnapshot`, `Alignment`. Single source of truth for the feature's data shape.
+- `lib/alignment.ts` — pure function `scoreAlignment(action, snapshot)` implementing 7 prioritised rules (first match wins). No side effects, no imports from outside lib.
+- `lib/alignment.test.ts` — 28 unit tests covering every rule, boundary values (fearGreed 24/25, 75/76), empty activeTriggers, and priority ordering between rules.
+- `lib/score.ts` — `calculateScore(entries)` with linear recency-weighted average. Neutral entries excluded. Returns `ScoreBreakdown` with overall score, breakdown by positionStage, and breakdown by fear/greed zone.
+- `lib/decisions.ts` — KV helpers using Redis sorted set (`ZADD decisions <timestamp> <json>`). `readDecisions` fetches all then filters in memory — acceptable for a small personal dataset. Score cached in KV with 60s TTL.
+- `app/api/decisions/route.ts` — POST builds a full `MarketSnapshot` by importing `fetchPrices()` directly (no internal HTTP), calls `scoreAlignment`, writes to KV, invalidates score cache. GET supports asset/alignment/date filters + pagination.
+- `app/api/decisions/score/route.ts` — GET with 60s KV cache; cache invalidated on every POST.
+- `app/api/decisions/[id]/route.ts` — PATCH for notes-only updates. Uses find-remove-readd pattern on the sorted set since Redis sorted sets don't support in-place member updates.
+- `components/AdherenceScoreCard.tsx` — self-contained KPI card that fetches from `/api/decisions/score` on mount. Colour-coded: green ≥90, amber ≥70, red <70. Shows `alignedCount / total` on hover.
+- `components/DecisionTimeline.tsx` — filterable, paginated list of decision cards. Each card has expandable market snapshot and inline notes editor (PATCH on blur). Hidden in demo mode.
+
+### Key engineering decisions
+
+**positionStage derivation**: The spec's `MarketSnapshot.positionStage` field doesn't exist in the current data model. Derived on the fly from `calcProceedsSplit(btcPrice).zone` → `below_150k=accumulate, 150k_250k=distribute, 250k_350k=reduce, above_350k=exit`. This is the bridge between the existing strategy layer and the new feature.
+
+**activeTriggers as stable string IDs**: `TriggerState.status` strings (e.g. "EXIT LADDER ACTIVE") are mapped to stable hyphenated IDs (e.g. `'exit-ladder'`) in the POST handler. Only `severity === 'fired'` triggers are included. This makes the alignment rules readable and decoupled from the display strings.
+
+**fire-and-forget decision logging**: The `logDecisions` call in `EditHoldingsPanel` uses `void` (not `await`) and `Promise.allSettled`. Decision logging failures must never block or error the holdings save flow — it's observability data, not primary data.
+
+**Score cache invalidation**: The score cache is deleted immediately on every POST to `/api/decisions`, not expired by TTL. This means the score is always fresh after a new decision, while the TTL (60s) handles background reads without hitting KV on every dashboard load.
+
+**Sorted set update pattern**: Redis sorted sets store members as opaque strings — there's no update-in-place. PATCH does: ZREVRANGE → find by id → ZREM old → ZADD updated. Acceptable cost for a small dataset.
+
+### Test count
+400 tests passing (28 new alignment tests added).
+
+---
+
 ## Phase 11 — Mobile layout
 
 ### What was built

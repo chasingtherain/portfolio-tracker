@@ -1,4 +1,5 @@
 import { formatCurrency } from '@/lib/formatters'
+import { AdherenceScoreCard } from './AdherenceScoreCard'
 
 interface StatBarProps {
   totalValue: number
@@ -103,6 +104,9 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
           {fearGreed ?? '—'}
         </span>
       </StatCard>
+
+      {/* Strategy adherence score — fetches independently from /api/decisions/score */}
+      <AdherenceScoreCard />
     </div>
   )
 }

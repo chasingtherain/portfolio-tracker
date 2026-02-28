@@ -14,6 +14,7 @@ import { ExitLadder } from '@/components/ExitLadder'
 import { ScenarioTable } from '@/components/ScenarioTable'
 import { Checklist } from '@/components/Checklist'
 import { EditHoldingsPanel } from '@/components/EditHoldingsPanel'
+import { DecisionTimeline } from '@/components/DecisionTimeline'
 import { PriceWarningBanner } from '@/components/PriceWarningBanner'
 import { KvFallbackBanner } from '@/components/KvFallbackBanner'
 import { ErrorToast } from '@/components/ErrorToast'
@@ -28,7 +29,7 @@ function SkeletonLayout() {
     <div className="container dashboard">
       {/* Stat bar row */}
       <div className="grid-stat-bar">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="skeleton panel" style={{ height: 80 }} />
         ))}
       </div>
@@ -180,6 +181,9 @@ export default function Page() {
               <EditHoldingsPanel onHoldingsSaved={handleHoldingsSaved} />
             )}
           </div>
+
+          {/* Decision journal — live mode only, hidden in demo */}
+          <DecisionTimeline mode={portfolioState.mode} />
         </>
       )}
     </div>
