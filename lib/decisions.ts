@@ -48,7 +48,7 @@ export async function readDecisions(opts?: {
   offset?:    number
 }): Promise<DecisionEntry[]> {
   // ZREVRANGE returns members highest-score-first, i.e. newest-first
-  const raw = await kv.zrevrange(DECISIONS_KEY, 0, -1)
+  const raw = await kv.zrange(DECISIONS_KEY, 0, -1, { rev: true })
   let entries: DecisionEntry[] = raw.map(r => JSON.parse(r as string) as DecisionEntry)
 
   if (opts?.asset)     entries = entries.filter(e => e.asset === opts.asset)

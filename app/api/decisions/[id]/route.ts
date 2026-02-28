@@ -33,7 +33,7 @@ export async function PATCH(
   }
 
   // Fetch all members from the sorted set to find the target entry
-  const raw = await kv.zrevrange(DECISIONS_KEY, 0, -1)
+  const raw = await kv.zrange(DECISIONS_KEY, 0, -1, { rev: true })
   const members = raw as string[]
 
   const targetRaw = members.find(m => {
