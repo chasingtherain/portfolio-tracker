@@ -80,3 +80,13 @@ export function formatPnlPct(n: number | null): string {
   if (n > 0) return '+' + abs
   return abs
 }
+
+/**
+ * Privacy masking — replaces every digit with a bullet character.
+ * Non-numeric characters ($, commas, %, dashes, —) are preserved so the
+ * layout width stays stable and the value type remains legible.
+ * '—' passes through unchanged (no digits to replace).
+ */
+export function maskValue(formatted: string): string {
+  return formatted.replace(/\d/g, '*')
+}

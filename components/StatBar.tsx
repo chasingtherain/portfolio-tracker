@@ -1,11 +1,12 @@
-import { formatCurrency } from '@/lib/formatters'
+import { formatCurrency, maskValue } from '@/lib/formatters'
 import { AdherenceScoreCard } from './AdherenceScoreCard'
 
 interface StatBarProps {
-  totalValue: number
+  totalValue:  number
   gapToTarget: number
-  btcPrice:   number | null
-  fearGreed:  number | null
+  btcPrice:    number | null
+  fearGreed:   number | null
+  isPrivate:   boolean
 }
 
 // Color thresholds match evalFearGreed in calculations.ts exactly —
@@ -51,7 +52,7 @@ function StatCard({ label, children }: CardProps) {
   )
 }
 
-export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBarProps) {
+export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed, isPrivate }: StatBarProps) {
   // Gap display: add explicit + for values above target (formatCurrency only adds – for negatives)
   const gapDisplay =
     gapToTarget > 0
@@ -59,6 +60,8 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
       : formatCurrency(gapToTarget)
 
   const gapColor = gapToTarget >= 0 ? 'var(--green)' : 'var(--red)'
+
+  const priv = (s: string) => isPrivate ? maskValue(s) : s
 
   return (
     <div
@@ -72,7 +75,7 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
           className="mono"
           style={{ fontSize: 34, fontWeight: 600, color: 'var(--text)' }}
         >
-          {formatCurrency(totalValue)}
+          {priv(formatCurrency(totalValue))}
         </span>
       </StatCard>
 
@@ -83,7 +86,7 @@ export function StatBar({ totalValue, gapToTarget, btcPrice, fearGreed }: StatBa
           className="mono"
           style={{ fontSize: 21, fontWeight: 500, color: gapColor }}
         >
-          {gapDisplay}
+          {priv(gapDisplay)}
         </span>
       </StatCard>
 

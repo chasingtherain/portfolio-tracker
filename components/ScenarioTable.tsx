@@ -1,4 +1,4 @@
-import { formatCurrency, formatPnl } from '@/lib/formatters'
+import { formatCurrency, formatPnl, maskValue } from '@/lib/formatters'
 
 const PORTFOLIO_TARGET = 1_000_000
 
@@ -23,7 +23,9 @@ const TH: React.CSSProperties = {
   textAlign:     'right',
 }
 
-export function ScenarioTable() {
+export function ScenarioTable({ isPrivate }: { isPrivate: boolean }) {
+  const priv = (s: string) => isPrivate ? maskValue(s) : s
+
   return (
     <div className="panel" data-testid="scenario-table">
       <div className="panel-title">SCENARIO PROJECTIONS</div>
@@ -78,7 +80,7 @@ export function ScenarioTable() {
                     fontWeight: row.isTarget ? 500 : undefined,
                   }}
                 >
-                  {formatCurrency(row.portfolioEst)}
+                  {priv(formatCurrency(row.portfolioEst))}
                 </td>
 
                 {/* Gap vs $1M target */}
@@ -91,7 +93,7 @@ export function ScenarioTable() {
                     color:     vsColor,
                   }}
                 >
-                  {formatPnl(vsTarget)}
+                  {priv(formatPnl(vsTarget))}
                 </td>
               </tr>
             )

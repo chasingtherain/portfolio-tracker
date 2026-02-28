@@ -1,4 +1,4 @@
-import { formatCurrency, formatPct, formatPnl, formatPnlPct } from '@/lib/formatters'
+import { formatCurrency, formatPct, formatPnl, formatPnlPct, maskValue } from '@/lib/formatters'
 import type { Position } from '@/lib/types'
 
 // P&L is null for dry powder (no cost basis on cash) — shown as '—' in muted colour.
@@ -24,10 +24,12 @@ const TH_STYLE: React.CSSProperties = {
 }
 
 interface PositionsTableProps {
-  positions: Position[]
+  positions:  Position[]
+  isPrivate:  boolean
 }
 
-export function PositionsTable({ positions }: PositionsTableProps) {
+export function PositionsTable({ positions, isPrivate }: PositionsTableProps) {
+  const priv = (s: string) => isPrivate ? maskValue(s) : s
   return (
     <div className="panel" data-testid="positions-table">
       <div className="panel-title">POSITIONS</div>
@@ -84,7 +86,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                       {' —'}
                     </span>
                   ) : (
-                    formatCurrency(pos.value)
+                    priv(formatCurrency(pos.value))
                   )}
                 </td>
 
@@ -102,7 +104,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                   style={{ textAlign: 'right', fontSize: 15, fontWeight: 700, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {arrow && <span aria-hidden="true" style={{ marginRight: 2 }}>{arrow}</span>}
-                  <span>{formatPnl(pos.pnl)}</span>
+                  <span>{priv(formatPnl(pos.pnl))}</span>
                 </td>
 
                 {/* P&L percent — bold + larger, arrow for non-colour accessibility */}
@@ -111,7 +113,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                   style={{ textAlign: 'right', fontSize: 15, fontWeight: 700, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {arrow && <span aria-hidden="true" style={{ marginRight: 2 }}>{arrow}</span>}
-                  <span>{formatPnlPct(pos.pnlPct)}</span>
+                  <span>{priv(formatPnlPct(pos.pnlPct))}</span>
                 </td>
               </tr>
             )

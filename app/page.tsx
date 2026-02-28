@@ -80,6 +80,11 @@ export default function Page() {
   // Passed to Checklist so it re-fetches the KV-reset state after a holdings write.
   const [holdingsSavedAt, setHoldingsSavedAt] = useState(0)
 
+  // isPrivate: masks personal financial values by default on every page load.
+  // Toggled by double-clicking the Progress to Target bar — no visual hint is shown.
+  const [isPrivate, setIsPrivate] = useState(true)
+  const togglePrivacy = useCallback(() => setIsPrivate(v => !v), [])
+
   const fetchPortfolio = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true)
@@ -144,6 +149,7 @@ export default function Page() {
             gapToTarget={portfolioState.gapToTarget}
             btcPrice={portfolioState.prices.btc}
             fearGreed={portfolioState.prices.fearGreed}
+            isPrivate={isPrivate}
           />
           <PriceWarningBanner pricesPartial={portfolioState.pricesPartial} />
           <ProgressBar
@@ -151,10 +157,12 @@ export default function Page() {
             target={portfolioState.target}
             progressPct={portfolioState.progressPct}
             gapToTarget={portfolioState.gapToTarget}
+            isPrivate={isPrivate}
+            onDoubleClick={togglePrivacy}
           />
           <PhaseIndicator btcPrice={portfolioState.prices.btc} />
           <div className="grid-60-40">
-            <PositionsTable positions={portfolioState.positions} />
+            <PositionsTable positions={portfolioState.positions} isPrivate={isPrivate} />
             <AllocationBars allocations={portfolioState.allocations} />
           </div>
           <div className="grid-bottom">
@@ -163,7 +171,7 @@ export default function Page() {
               btcPrice={portfolioState.prices.btc}
               proceedsSplit={portfolioState.proceedsSplit}
             />
-            <ScenarioTable />
+            <ScenarioTable isPrivate={isPrivate} />
           </div>
 
           {/* Interactive panels:
