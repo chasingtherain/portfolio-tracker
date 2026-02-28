@@ -4,6 +4,8 @@ import { kv } from '@vercel/kv'
 import type { Holdings } from '@/lib/types'
 import { getHoldings, setHoldings, toClientHoldings, resetChecklist } from '@/lib/kv'
 
+type AuthField = { password: string } | { token: string }
+
 // 5 write attempts per 15-minute window per IP.
 // Appropriate for a single-user personal tool.
 const RATE_LIMIT = 5
@@ -25,11 +27,16 @@ function isAssetHolding(v: unknown): v is { qty: number; costBasis: number } {
 
 function validateBody(
   body: unknown
-): body is { password: string } & Omit<Holdings, 'updatedAt'> {
+): body is AuthField & Omit<Holdings, 'updatedAt'> {
   if (typeof body !== 'object' || body === null) return false
   const b = body as Record<string, unknown>
+
+  // Exactly one of password or token must be present — not both, not neither.
+  const hasPassword = typeof b.password === 'string'
+  const hasToken    = typeof b.token    === 'string'
+  if (hasPassword === hasToken) return false
+
   return (
-    typeof b.password === 'string' &&
     isAssetHolding(b.btc) &&
     isAssetHolding(b.mstr) &&
     isAssetHolding(b.near) &&
@@ -80,16 +87,36 @@ export async function PUT(request: Request): Promise<Response> {
     return new Response('Invalid request body', { status: 400 })
   }
 
-  // Authenticate — intentionally plain text per CLAUDE.md:
-  // "Password comparison is intentionally plain text. Do not add bcrypt."
-  if (body.password !== process.env.HOLDINGS_PASSWORD) {
-    return new Response('Unauthorized', { status: 401 })
+  // Authenticate — two paths depending on whether this is a mobile (token) or desktop (password) request
+  if ('token' in body) {
+    // Mobile path: validate the one-time session token issued by POST /api/session.
+    // Deleting the key immediately makes it single-use — a second request with the
+    // same token will find nothing in KV and get a 401.
+    const tokenKey = `session:${body.token}`
+    const exists = await kv.get(tokenKey)
+    if (!exists) {
+      return new Response('Session expired or already used', { status: 401 })
+    }
+    await kv.del(tokenKey)
+  } else {
+    // Desktop path — intentionally plain text per CLAUDE.md:
+    // "Password comparison is intentionally plain text. Do not add bcrypt."
+    if (body.password !== process.env.HOLDINGS_PASSWORD) {
+      return new Response('Unauthorized', { status: 401 })
+    }
   }
 
-  // Build Holdings — updatedAt stamped server-side (clients can't forge timestamps)
-  const { password: _pw, ...holdingFields } = body
+  // Build Holdings explicitly — avoids spreading auth fields (password or token)
+  // into the stored object. updatedAt is stamped server-side; clients can't forge it.
   const holdings: Holdings = {
-    ...holdingFields,
+    btc:       body.btc,
+    mstr:      body.mstr,
+    near:      body.near,
+    uni:       body.uni,
+    link:      body.link,
+    ondo:      body.ondo,
+    dryPowder: body.dryPowder,
+    nupl:      body.nupl,
     updatedAt: new Date().toISOString(),
   }
 

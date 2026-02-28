@@ -132,8 +132,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
     setIsSaving(true)
     setError(null)
 
-    const body = {
-      password:  form.password,
+    const holdingFields = {
       btc:       { qty: parseFloat(form.assets.btc.qty),  costBasis: parseFloat(form.assets.btc.costBasis)  },
       mstr:      { qty: parseFloat(form.assets.mstr.qty), costBasis: parseFloat(form.assets.mstr.costBasis) },
       near:      { qty: parseFloat(form.assets.near.qty), costBasis: parseFloat(form.assets.near.costBasis) },
@@ -144,23 +143,60 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
       nupl:      parseFloat(form.nupl),
     }
 
-    try {
-      const res = await fetch('/api/holdings', {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-      })
+    // Mobile sessions are two-step: get a one-time token first, then use it for the write.
+    // This means a picked-up phone can't replay the submission after 5 minutes or after
+    // one successful save — the token is consumed server-side on first use.
+    // Desktop sends the password inline on every request, unchanged.
+    const isMobile = window.innerWidth < 768
 
-      if (!res.ok) {
-        const text = await res.text()
-        setError(text || 'Save failed')
-        return
+    try {
+      if (isMobile) {
+        // Step 1 — exchange password for a one-time session token
+        const sessionRes = await fetch('/api/session', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ password: form.password }),
+        })
+        if (!sessionRes.ok) {
+          const text = await sessionRes.text()
+          setError(text || 'Authentication failed')
+          return
+        }
+        const { token } = await sessionRes.json() as { token: string }
+
+        // Step 2 — use token for the write (token is deleted server-side on use)
+        const res = await fetch('/api/holdings', {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ token, ...holdingFields }),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          setError(text || 'Save failed')
+          return
+        }
+
+        // Clear password after a successful mobile save — the token is consumed,
+        // so retaining it in state offers no benefit.
+        setForm((prev) => ({ ...prev, password: '' }))
+      } else {
+        // Desktop: single request with password inline
+        const res = await fetch('/api/holdings', {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ password: form.password, ...holdingFields }),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          setError(text || 'Save failed')
+          return
+        }
       }
 
       // Log a decision entry for each asset whose qty changed.
       // We compare qty against what was pre-populated from the server on mount.
       // Fire-and-forget: decision logging failures must never block the save flow.
-      void logDecisions(body)
+      void logDecisions(holdingFields)
 
       onHoldingsSaved()
     } catch {

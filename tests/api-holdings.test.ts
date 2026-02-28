@@ -5,6 +5,7 @@ vi.mock('@vercel/kv', () => ({
   kv: {
     get: vi.fn(),
     set: vi.fn(),
+    del: vi.fn(),
   },
 }))
 
@@ -27,6 +28,7 @@ import type { Holdings } from '../lib/types'
 
 const mockKvGet  = vi.mocked(kv.get)
 const mockKvSet  = vi.mocked(kv.set)
+const mockKvDel  = vi.mocked(kv.del)
 const mockGetHoldings    = vi.mocked(getHoldings)
 const mockSetHoldings    = vi.mocked(setHoldings)
 const mockResetChecklist = vi.mocked(resetChecklist)
@@ -49,6 +51,18 @@ const STORED_HOLDINGS: Holdings = {
 
 const VALID_PUT_BODY = {
   password: 'testpass',
+  btc:       { qty: 3.2,   costBasis: 45000 },
+  mstr:      { qty: 200,   costBasis: 180 },
+  near:      { qty: 4000,  costBasis: 3.5 },
+  uni:       { qty: 800,   costBasis: 8 },
+  link:      { qty: 600,   costBasis: 12 },
+  ondo:      { qty: 8000,  costBasis: 0.8 },
+  dryPowder: 12000,
+  nupl:      0.55,
+}
+
+const VALID_TOKEN_BODY = {
+  token: 'test-session-token',
   btc:       { qty: 3.2,   costBasis: 45000 },
   mstr:      { qty: 200,   costBasis: 180 },
   near:      { qty: 4000,  costBasis: 3.5 },
@@ -306,5 +320,80 @@ describe('PUT /api/holdings — successful write', () => {
     const req = makePutRequest(VALID_PUT_BODY)
     await PUT(req)
     expect(mockResetChecklist).toHaveBeenCalledOnce()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PUT /api/holdings — mobile token auth
+// ---------------------------------------------------------------------------
+
+describe('PUT /api/holdings — mobile token auth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Rate-limit key returns 0; session token key returns 1 (present).
+    // Using mockImplementation so different keys get different values.
+    mockKvGet.mockImplementation(async (key) => {
+      if (String(key).startsWith('session:')) return 1
+      return 0  // rate-limit counter
+    })
+    mockKvSet.mockResolvedValue(undefined)
+    mockKvDel.mockResolvedValue(undefined)
+    mockSetHoldings.mockResolvedValue(undefined)
+    mockResetChecklist.mockResolvedValue(undefined)
+  })
+
+  it('returns 200 with a valid token', async () => {
+    const req = makePutRequest(VALID_TOKEN_BODY)
+    const res = await PUT(req)
+    expect(res.status).toBe(200)
+  })
+
+  it('deletes the token from KV on first use (one-time use)', async () => {
+    const req = makePutRequest(VALID_TOKEN_BODY)
+    await PUT(req)
+    expect(mockKvDel).toHaveBeenCalledWith('session:test-session-token')
+  })
+
+  it('returns 401 for an expired or unknown token', async () => {
+    mockKvGet.mockImplementation(async (key) => {
+      if (String(key).startsWith('session:')) return null  // token not in KV
+      return 0
+    })
+    const req = makePutRequest(VALID_TOKEN_BODY)
+    const res = await PUT(req)
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 401 on second use — token already deleted', async () => {
+    // Simulate the token being gone (already consumed by a previous request)
+    mockKvGet.mockImplementation(async (key) => {
+      if (String(key).startsWith('session:')) return null
+      return 0
+    })
+    const req = makePutRequest(VALID_TOKEN_BODY)
+    const res = await PUT(req)
+    expect(res.status).toBe(401)
+  })
+
+  it('saves holdings correctly via token path', async () => {
+    const req = makePutRequest(VALID_TOKEN_BODY)
+    await PUT(req)
+    expect(mockSetHoldings).toHaveBeenCalledOnce()
+    const [stored] = mockSetHoldings.mock.calls[0] as [Holdings]
+    expect(stored.btc.qty).toBe(3.2)
+    expect(stored.dryPowder).toBe(12000)
+  })
+
+  it('does not store the token in holdings', async () => {
+    const req = makePutRequest(VALID_TOKEN_BODY)
+    await PUT(req)
+    const [stored] = mockSetHoldings.mock.calls[0] as [Holdings]
+    expect(JSON.stringify(stored)).not.toContain('test-session-token')
+  })
+
+  it('returns 400 when body has both password and token', async () => {
+    const req = makePutRequest({ ...VALID_TOKEN_BODY, password: 'testpass' })
+    const res = await PUT(req)
+    expect(res.status).toBe(400)
   })
 })
