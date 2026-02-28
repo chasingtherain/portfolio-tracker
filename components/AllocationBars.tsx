@@ -14,6 +14,21 @@ function gapColor(gap: number | null): string {
   return gap > 0 ? 'var(--orange)' : 'var(--text-muted)'
 }
 
+// Delta text: shows exact over/underweight as a signed percentage.
+// "On target" within ±0.5% to avoid false precision on near-zero gaps.
+function formatDelta(gap: number | null): string {
+  if (gap === null) return ''
+  if (Math.abs(gap) <= 0.5) return 'On target'
+  const sign = gap > 0 ? '+' : '−'
+  return `${sign}${Math.abs(gap).toFixed(1)}%`
+}
+
+function deltaColor(gap: number | null): string {
+  if (gap === null) return 'var(--text-dim)'
+  if (Math.abs(gap) <= 0.5) return 'var(--green)'
+  return gap > 0 ? 'var(--orange)' : 'var(--text-muted)'
+}
+
 interface AllocationBarProps {
   allocation: Allocation
 }
@@ -69,6 +84,17 @@ function AllocationBar({ allocation }: AllocationBarProps) {
             / {targetPct}%
           </span>
         </div>
+      </div>
+
+      {/* Delta — signed over/underweight below the labels row */}
+      <div style={{ textAlign: 'right', marginBottom: 4 }}>
+        <span
+          data-testid={`allocation-delta-${key}`}
+          className="mono"
+          style={{ fontSize: 10, color: deltaColor(gap) }}
+        >
+          {formatDelta(gap)}
+        </span>
       </div>
 
       {/* Bar track — contains fill and target tick, both absolutely positioned */}

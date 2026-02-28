@@ -25,7 +25,8 @@ interface ChecklistProps {
 }
 
 export function Checklist({ mode, savedAt }: ChecklistProps) {
-  const [checked, setChecked] = useState<boolean[]>(Array(ITEMS.length).fill(false))
+  const [checked,       setChecked]       = useState<boolean[]>(Array(ITEMS.length).fill(false))
+  const [showCompleted, setShowCompleted] = useState(false)
 
   // Live mode: load from KV on mount, and re-load when savedAt changes
   // (holdings save triggers server-side resetChecklist → we re-fetch the cleared state)
@@ -54,47 +55,117 @@ export function Checklist({ mode, savedAt }: ChecklistProps) {
 
   const doneCount = checked.filter(Boolean).length
 
+  // Partition into pending and completed, preserving original indices.
+  const pendingIndices   = ITEMS.map((_, i) => i).filter((i) => !checked[i])
+  const completedIndices = ITEMS.map((_, i) => i).filter((i) =>  checked[i])
+
+  function renderItem(i: number, isFirst: boolean) {
+    const isChecked = checked[i]
+    return (
+      <label
+        key={i}
+        data-testid={`checklist-item-${i}`}
+        style={{
+          display:    'flex',
+          alignItems: 'center',
+          gap:        10,
+          padding:    '9px 0',
+          cursor:     'pointer',
+          borderTop:  isFirst ? undefined : '1px solid var(--border)',
+          userSelect: 'none',
+          opacity:    isChecked ? 0.5 : 1,
+        }}
+      >
+        {/*
+          Native checkbox is hidden but stays in the DOM so data-testid queries
+          and .toBeChecked() assertions in tests remain valid unchanged.
+        */}
+        <input
+          type="checkbox"
+          data-testid={`checklist-checkbox-${i}`}
+          checked={isChecked}
+          onChange={() => toggle(i)}
+          style={{
+            position: 'absolute',
+            opacity:  0,
+            width:    0,
+            height:   0,
+            margin:   0,
+            padding:  0,
+          }}
+        />
+        {/* Visible icon — filled box when checked, outline when unchecked */}
+        <span
+          aria-hidden="true"
+          style={{
+            fontSize:   15,
+            lineHeight: 1,
+            flexShrink: 0,
+            color:      isChecked ? 'var(--green)' : 'var(--text-muted)',
+          }}
+        >
+          {isChecked ? '☑' : '☐'}
+        </span>
+        <span
+          style={{
+            fontSize:       13,
+            color:          isChecked ? 'var(--text-dim)' : 'var(--text)',
+            textDecoration: isChecked ? 'line-through' : 'none',
+            lineHeight:     1.4,
+          }}
+        >
+          {ITEMS[i]}
+        </span>
+      </label>
+    )
+  }
+
   return (
     <div className="panel" data-testid="checklist">
       <div className="panel-title">
         CHECKLIST — {doneCount} / {ITEMS.length}
       </div>
 
+      {/* Pending items — always visible */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {ITEMS.map((item, i) => (
-          <label
-            key={i}
-            data-testid={`checklist-item-${i}`}
+        {pendingIndices.map((i, pos) => renderItem(i, pos === 0))}
+      </div>
+
+      {/* Completed section — collapsed by default, toggled on demand */}
+      {completedIndices.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowCompleted((v) => !v)}
             style={{
-              display:    'flex',
-              alignItems: 'center',
-              gap:        10,
-              padding:    '9px 0',
-              cursor:     'pointer',
-              borderTop:  i > 0 ? '1px solid var(--border)' : undefined,
-              userSelect: 'none',
+              display:       'flex',
+              alignItems:    'center',
+              gap:           6,
+              width:         '100%',
+              background:    'none',
+              border:        'none',
+              borderTop:     pendingIndices.length > 0 ? '1px solid var(--border)' : undefined,
+              padding:       '9px 0',
+              cursor:        'pointer',
+              color:         'var(--text-muted)',
+              fontSize:      11,
+              fontFamily:    'var(--mono)',
+              letterSpacing: '0.05em',
+              textAlign:     'left',
             }}
           >
-            <input
-              type="checkbox"
-              data-testid={`checklist-checkbox-${i}`}
-              checked={checked[i]}
-              onChange={() => toggle(i)}
-              style={{ accentColor: 'var(--green)', width: 14, height: 14, flexShrink: 0 }}
-            />
-            <span
-              style={{
-                fontSize:       13,
-                color:          checked[i] ? 'var(--text-dim)' : 'var(--text)',
-                textDecoration: checked[i] ? 'line-through' : 'none',
-                lineHeight:     1.4,
-              }}
-            >
-              {item}
-            </span>
-          </label>
-        ))}
-      </div>
+            <span style={{ fontSize: 9 }}>{showCompleted ? '▼' : '▶'}</span>
+            COMPLETED ({completedIndices.length})
+          </button>
+
+          {/*
+            Completed items use display:none rather than conditional rendering
+            so data-testid queries always find them regardless of collapse state.
+          */}
+          <div style={{ display: showCompleted ? 'flex' : 'none', flexDirection: 'column' }}>
+            {completedIndices.map((i, pos) => renderItem(i, pos === 0))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

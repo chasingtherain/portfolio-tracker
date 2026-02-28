@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { formatCurrency, formatPct } from '@/lib/formatters'
 import type { ProceedsSplit } from '@/lib/types'
 
@@ -51,60 +52,94 @@ export function ExitLadder({ btcPrice, proceedsSplit }: ExitLadderProps) {
             const distance = (!hit && btcPrice !== null)
               ? ((tranche.price - btcPrice) / btcPrice) * 100
               : null
+            const dollarDistance = (!hit && btcPrice !== null)
+              ? tranche.price - btcPrice
+              : null
+            const progress = btcPrice !== null
+              ? Math.min(btcPrice / tranche.price, 1)
+              : 0
 
             return (
-              <tr
-                key={tranche.label}
-                data-testid={`tranche-row-${tranche.label}`}
-                style={{ borderTop: '1px solid var(--border)' }}
-              >
-                {/* Tranche label */}
-                <td
-                  className="mono"
-                  style={{ padding: '8px 0', fontSize: 10, color: 'var(--text-dim)', width: 24 }}
+              <Fragment key={tranche.label}>
+                <tr
+                  data-testid={`tranche-row-${tranche.label}`}
+                  style={{ borderTop: '1px solid var(--border)' }}
                 >
-                  {tranche.label}
-                </td>
+                  {/* Tranche label */}
+                  <td
+                    className="mono"
+                    style={{ padding: '8px 0', fontSize: 10, color: 'var(--text-dim)', width: 24 }}
+                  >
+                    {tranche.label}
+                  </td>
 
-                {/* Price target */}
-                <td
-                  className="mono"
-                  style={{ padding: '8px 0', fontSize: 13, color: 'var(--text)' }}
-                >
-                  {formatCurrency(tranche.price)}
-                </td>
+                  {/* Price target */}
+                  <td
+                    className="mono"
+                    style={{ padding: '8px 0', fontSize: 13, color: 'var(--text)' }}
+                  >
+                    {formatCurrency(tranche.price)}
+                  </td>
 
-                {/* Sell % */}
-                <td
-                  className="mono"
-                  style={{ textAlign: 'right', padding: '8px 0 8px 8px', fontSize: 13, color: 'var(--text-muted)' }}
-                >
-                  {formatPct(tranche.sellPct)}
-                </td>
+                  {/* Sell % */}
+                  <td
+                    className="mono"
+                    style={{ textAlign: 'right', padding: '8px 0 8px 8px', fontSize: 13, color: 'var(--text-muted)' }}
+                  >
+                    {formatPct(tranche.sellPct)}
+                  </td>
 
-                {/* Distance or ✓ HIT */}
-                <td
-                  className="mono"
-                  style={{ textAlign: 'right', padding: '8px 0 8px 8px', fontSize: 13 }}
-                >
-                  {hit ? (
-                    <span
-                      data-testid={`tranche-hit-${tranche.label}`}
-                      style={{ color: 'var(--green)' }}
-                    >
-                      ✓ HIT
-                    </span>
-                  ) : (
-                    <span
-                      data-testid={`tranche-dist-${tranche.label}`}
-                      style={{ color: distance !== null ? 'var(--text-muted)' : 'var(--text-dim)' }}
-                    >
-                      {/* formatPct returns '—' when distance is null (btcPrice unavailable) */}
-                      {formatPct(distance, true)}
-                    </span>
-                  )}
-                </td>
-              </tr>
+                  {/* Distance or ✓ HIT */}
+                  <td
+                    className="mono"
+                    style={{ textAlign: 'right', padding: '8px 0 8px 8px', fontSize: 13 }}
+                  >
+                    {hit ? (
+                      <span
+                        data-testid={`tranche-hit-${tranche.label}`}
+                        style={{ color: 'var(--green)' }}
+                      >
+                        ✓ HIT
+                      </span>
+                    ) : (
+                      <span
+                        data-testid={`tranche-dist-${tranche.label}`}
+                        style={{ color: distance !== null ? 'var(--text-muted)' : 'var(--text-dim)' }}
+                      >
+                        {formatPct(distance, true)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+
+                {/* Progress bar row — spans all columns */}
+                <tr>
+                  <td colSpan={4} style={{ paddingBottom: 6 }}>
+                    <div style={{
+                      position:     'relative',
+                      height:        4,
+                      borderRadius:  2,
+                      background:   'var(--surface2)',
+                      overflow:     'hidden',
+                    }}>
+                      <div style={{
+                        position:   'absolute',
+                        left:        0,
+                        top:         0,
+                        height:     '100%',
+                        width:      `${progress * 100}%`,
+                        background:  hit ? 'var(--green)' : 'var(--orange)',
+                        borderRadius: 2,
+                      }} />
+                    </div>
+                    {dollarDistance !== null && (
+                      <div className="mono" style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'right', marginTop: 2 }}>
+                        {formatCurrency(dollarDistance)} away
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              </Fragment>
             )
           })}
         </tbody>

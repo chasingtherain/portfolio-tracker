@@ -8,6 +8,12 @@ function pnlColor(pnl: number | null): string {
   return pnl > 0 ? 'var(--green)' : 'var(--red)'
 }
 
+// Arrow in a separate aria-hidden span so getByText() on the formatted value still matches.
+function pnlArrow(pnl: number | null): string | null {
+  if (pnl === null || pnl === 0) return null
+  return pnl > 0 ? '↑' : '↓'
+}
+
 const TH_STYLE: React.CSSProperties = {
   fontFamily:    'var(--mono)',
   fontSize:       11,
@@ -42,6 +48,8 @@ export function PositionsTable({ positions }: PositionsTableProps) {
           {positions.map((pos) => {
             const color = pnlColor(pos.pnl)
 
+            const arrow = pnlArrow(pos.pnl)
+
             return (
               <tr
                 key={pos.ticker}
@@ -50,7 +58,7 @@ export function PositionsTable({ positions }: PositionsTableProps) {
               >
                 {/* Asset name + ticker stacked */}
                 <td style={{ padding: '10px 0' }}>
-                  <div style={{ fontSize: 14, color: 'var(--text)' }}>{pos.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{pos.label}</div>
                   <div
                     className="mono"
                     style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}
@@ -59,10 +67,10 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                   </div>
                 </td>
 
-                {/* Value — ⚠ icon when price is unavailable */}
+                {/* Value — ⚠ icon when price is unavailable; muted to keep eye on P&L */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 14, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 14, color: 'var(--text-muted)', padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
                   {pos.priceUnavailable ? (
                     <span>
@@ -88,20 +96,22 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                   {pos.priceUnavailable ? '—' : formatPct(pos.allocPct)}
                 </td>
 
-                {/* P&L dollar */}
+                {/* P&L dollar — bold + larger, arrow for non-colour accessibility */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 14, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 15, fontWeight: 700, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
-                  {formatPnl(pos.pnl)}
+                  {arrow && <span aria-hidden="true" style={{ marginRight: 2 }}>{arrow}</span>}
+                  <span>{formatPnl(pos.pnl)}</span>
                 </td>
 
-                {/* P&L percent */}
+                {/* P&L percent — bold + larger, arrow for non-colour accessibility */}
                 <td
                   className="mono"
-                  style={{ textAlign: 'right', fontSize: 14, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
+                  style={{ textAlign: 'right', fontSize: 15, fontWeight: 700, color, padding: '10px 0 10px 12px', verticalAlign: 'middle' }}
                 >
-                  {formatPnlPct(pos.pnlPct)}
+                  {arrow && <span aria-hidden="true" style={{ marginRight: 2 }}>{arrow}</span>}
+                  <span>{formatPnlPct(pos.pnlPct)}</span>
                 </td>
               </tr>
             )
