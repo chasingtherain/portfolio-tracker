@@ -36,7 +36,6 @@ function validateBody(
     isAssetHolding(b.uni) &&
     isAssetHolding(b.link) &&
     isAssetHolding(b.ondo) &&
-    isAssetHolding(b.eth) &&
     isNonNegativeFinite(b.dryPowder) &&
     typeof b.nupl === 'number' && isFinite(b.nupl)
   )

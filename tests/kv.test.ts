@@ -36,7 +36,6 @@ const FULL_HOLDINGS: Holdings = {
   uni:       { qty: 500, costBasis: 7 },
   link:      { qty: 300, costBasis: 10 },
   ondo:      { qty: 10000, costBasis: 0.5 },
-  eth:       { qty: 2, costBasis: 2000 },
   dryPowder: 5000,
   nupl:      0.55,
   updatedAt: '2024-01-15T10:00:00.000Z',
@@ -55,7 +54,6 @@ describe('toClientHoldings', () => {
     expect(client.uni.qty).toBe(500)
     expect(client.link.qty).toBe(300)
     expect(client.ondo.qty).toBe(10000)
-    expect(client.eth.qty).toBe(2)
   })
 
   it('preserves dryPowder, nupl, and updatedAt', () => {
@@ -73,7 +71,6 @@ describe('toClientHoldings', () => {
     expect('costBasis' in client.uni).toBe(false)
     expect('costBasis' in client.link).toBe(false)
     expect('costBasis' in client.ondo).toBe(false)
-    expect('costBasis' in client.eth).toBe(false)
   })
 
   it('contains no cost or Cost string anywhere in its JSON', () => {
@@ -86,7 +83,7 @@ describe('toClientHoldings', () => {
     const client = toClientHoldings(FULL_HOLDINGS)
     expect(Object.keys(client.btc)).toEqual(['qty'])
     expect(Object.keys(client.mstr)).toEqual(['qty'])
-    expect(Object.keys(client.eth)).toEqual(['qty'])
+    expect(Object.keys(client.ondo)).toEqual(['qty'])
   })
 })
 
@@ -149,7 +146,6 @@ describe('DEFAULT_HOLDINGS', () => {
     expect(DEFAULT_HOLDINGS.uni.qty).toBe(0)
     expect(DEFAULT_HOLDINGS.link.qty).toBe(0)
     expect(DEFAULT_HOLDINGS.ondo.qty).toBe(0)
-    expect(DEFAULT_HOLDINGS.eth.qty).toBe(0)
     expect(DEFAULT_HOLDINGS.dryPowder).toBe(0)
   })
 

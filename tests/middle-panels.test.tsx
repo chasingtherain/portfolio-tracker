@@ -50,8 +50,8 @@ const UNAVAILABLE_POSITION: Position = {
 }
 
 const ZERO_POSITION: Position = {
-  label:            'Ethereum',
-  ticker:           'ETH',
+  label:            'Chainlink',
+  ticker:           'LINK',
   value:            0,
   pnl:              0,
   pnlPct:           0,
@@ -193,8 +193,8 @@ describe('PositionsTable — priceUnavailable', () => {
 describe('PositionsTable — zero quantity', () => {
   it('renders a zero-value position normally', () => {
     render(<PositionsTable positions={[ZERO_POSITION]} />)
-    const row = screen.getByTestId('position-row-ETH')
-    expect(within(row).getByText('Ethereum')).toBeInTheDocument()
+    const row = screen.getByTestId('position-row-LINK')
+    expect(within(row).getByText('Chainlink')).toBeInTheDocument()
     // formatCurrency(0) → '$0.0000' (0 < 1 uses 4dp — same rule as sub-$1 prices)
     // formatPnl(0) also returns '$0.0000' (no sign for exactly 0), so two cells match.
     expect(within(row).getAllByText('$0.0000').length).toBeGreaterThanOrEqual(1)
@@ -202,7 +202,7 @@ describe('PositionsTable — zero quantity', () => {
 
   it('does not show a ⚠ icon for zero-value position', () => {
     render(<PositionsTable positions={[ZERO_POSITION]} />)
-    expect(screen.queryByTestId('position-unavailable-ETH')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('position-unavailable-LINK')).not.toBeInTheDocument()
   })
 })
 

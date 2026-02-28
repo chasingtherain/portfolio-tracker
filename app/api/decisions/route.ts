@@ -101,7 +101,6 @@ export async function POST(req: Request): Promise<Response> {
     UNI:  prices.uni,
     LINK: prices.link,
     ONDO: prices.ondo,
-    ETH:  prices.eth,
   }
   const assetPrice    = priceByAsset[asset.toUpperCase()] ?? null
   const amountBeforeUSD = assetPrice !== null ? amountBefore * assetPrice : amountBefore

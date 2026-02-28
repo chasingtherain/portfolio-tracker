@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { ClientHoldings } from '@/lib/types'
 
-type AssetKey = 'btc' | 'mstr' | 'near' | 'uni' | 'link' | 'ondo' | 'eth'
+type AssetKey = 'btc' | 'mstr' | 'near' | 'uni' | 'link' | 'ondo'
 
 interface AssetForm {
   qty:       string
@@ -24,7 +24,6 @@ const ASSETS: { key: AssetKey; label: string }[] = [
   { key: 'uni',  label: 'UNI'  },
   { key: 'link', label: 'LINK' },
   { key: 'ondo', label: 'ONDO' },
-  { key: 'eth',  label: 'ETH'  },
 ]
 
 function emptyAsset(): AssetForm {
@@ -40,7 +39,6 @@ function defaultForm(): FormState {
       uni:  emptyAsset(),
       link: emptyAsset(),
       ondo: emptyAsset(),
-      eth:  emptyAsset(),
     },
     dryPowder: '',
     nupl:      '',
@@ -83,7 +81,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
   // Tracks the qty values last loaded from the server.
   // Used by logDecisions to detect which assets actually changed.
   const serverQty = useRef<Record<AssetKey, number>>({
-    btc: 0, mstr: 0, near: 0, uni: 0, link: 0, ondo: 0, eth: 0,
+    btc: 0, mstr: 0, near: 0, uni: 0, link: 0, ondo: 0,
   })
 
   // Pre-populate qty fields from KV on mount.
@@ -100,7 +98,6 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
           uni:  data.uni.qty,
           link: data.link.qty,
           ondo: data.ondo.qty,
-          eth:  data.eth.qty,
         }
         setForm((prev) => ({
           ...prev,
@@ -111,7 +108,6 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
             uni:  { ...prev.assets.uni,  qty: String(data.uni.qty)  },
             link: { ...prev.assets.link, qty: String(data.link.qty) },
             ondo: { ...prev.assets.ondo, qty: String(data.ondo.qty) },
-            eth:  { ...prev.assets.eth,  qty: String(data.eth.qty)  },
           },
           dryPowder: String(data.dryPowder),
           nupl:      String(data.nupl),
@@ -144,7 +140,6 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
       uni:       { qty: parseFloat(form.assets.uni.qty),  costBasis: parseFloat(form.assets.uni.costBasis)  },
       link:      { qty: parseFloat(form.assets.link.qty), costBasis: parseFloat(form.assets.link.costBasis) },
       ondo:      { qty: parseFloat(form.assets.ondo.qty), costBasis: parseFloat(form.assets.ondo.costBasis) },
-      eth:       { qty: parseFloat(form.assets.eth.qty),  costBasis: parseFloat(form.assets.eth.costBasis)  },
       dryPowder: parseFloat(form.dryPowder),
       nupl:      parseFloat(form.nupl),
     }
@@ -177,7 +172,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
 
   async function logDecisions(saved: Record<AssetKey, { qty: number }>) {
     try {
-      const assetKeys: AssetKey[] = ['btc', 'mstr', 'near', 'uni', 'link', 'ondo', 'eth']
+      const assetKeys: AssetKey[] = ['btc', 'mstr', 'near', 'uni', 'link', 'ondo']
       await Promise.allSettled(
         assetKeys.map(async (key) => {
           const priorQty = serverQty.current[key] || 0

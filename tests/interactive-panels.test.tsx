@@ -36,7 +36,6 @@ const MOCK_HOLDINGS: ClientHoldings = {
   uni:       { qty: 800  },
   link:      { qty: 600  },
   ondo:      { qty: 8000 },
-  eth:       { qty: 2.5  },
   dryPowder: 12000,
   nupl:      0.55,
   updatedAt: '2025-01-15T09:45:00.000Z',
@@ -225,7 +224,7 @@ describe('EditHoldingsPanel — toggle', () => {
   it('has inputs for all assets when open', async () => {
     await renderPanel()
     fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
-    for (const key of ['btc', 'mstr', 'near', 'uni', 'link', 'ondo', 'eth']) {
+    for (const key of ['btc', 'mstr', 'near', 'uni', 'link', 'ondo']) {
       expect(screen.getByTestId(`input-${key}-qty`)).toBeInTheDocument()
       expect(screen.getByTestId(`input-${key}-cost`)).toBeInTheDocument()
     }

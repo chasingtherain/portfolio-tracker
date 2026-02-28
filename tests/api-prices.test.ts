@@ -17,7 +17,6 @@ function mockCgPrices(overrides: Partial<Record<string, { usd: number }>> = {}) 
     'ondo-finance': { usd: 1.18 },
     uniswap:        { usd: 12.8 },
     'near-protocol':{ usd: 5.45 },
-    ethereum:       { usd: 3080 },
     ...overrides,
   }
 }
@@ -61,7 +60,6 @@ describe('fetchPrices — all sources succeed', () => {
     expect(p.ondo).toBe(1.18)
     expect(p.uni).toBe(12.8)
     expect(p.near).toBe(5.45)
-    expect(p.eth).toBe(3080)
     expect(p.fearGreed).toBe(72)
     expect(p.btcDominance).toBe(56.2)
   })
@@ -91,14 +89,13 @@ describe('fetchPrices — CoinGecko prices fails', () => {
       .mockResolvedValueOnce(makeResponse(mockAltMe()))
   })
 
-  it('returns null for btc, link, ondo, uni, near, eth', async () => {
+  it('returns null for btc, link, ondo, uni, near', async () => {
     const p = await fetchPrices()
     expect(p.btc).toBeNull()
     expect(p.link).toBeNull()
     expect(p.ondo).toBeNull()
     expect(p.uni).toBeNull()
     expect(p.near).toBeNull()
-    expect(p.eth).toBeNull()
   })
 
   it('still returns mstr and fearGreed from the other sources', async () => {

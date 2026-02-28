@@ -11,7 +11,6 @@ export interface Holdings {
   uni: AssetHolding
   link: AssetHolding
   ondo: AssetHolding
-  eth: AssetHolding
   dryPowder: number
   nupl: number // manual input — no reliable free API exists
   updatedAt: string // ISO timestamp
@@ -26,7 +25,6 @@ export interface ClientHoldings {
   uni: { qty: number }
   link: { qty: number }
   ondo: { qty: number }
-  eth: { qty: number }
   dryPowder: number
   nupl: number
   updatedAt: string
@@ -39,7 +37,6 @@ export interface Prices {
   ondo: number | null
   uni: number | null
   near: number | null
-  eth: number | null
   fearGreed: number | null
   btcDominance: number | null
   fetchedAt: string

@@ -336,7 +336,7 @@ function DecisionCard({ entry, onNotesChange }: {
 
 type DateRange = '30d' | '90d' | 'all'
 
-const ASSETS = ['ALL', 'BTC', 'MSTR', 'NEAR', 'UNI', 'LINK', 'ONDO', 'ETH']
+const ASSETS = ['ALL', 'BTC', 'MSTR', 'NEAR', 'UNI', 'LINK', 'ONDO']
 const ALIGNMENTS: { label: string; value: '' | Alignment }[] = [
   { label: 'All',        value: '' },
   { label: 'Aligned',    value: 'aligned' },

@@ -67,7 +67,7 @@ describe('DEMO_PORTFOLIO_STATE — prices', () => {
     expect(prices.uni).not.toBeNull()
     expect(prices.link).not.toBeNull()
     expect(prices.ondo).not.toBeNull()
-    expect(prices.eth).not.toBeNull()
+    expect(prices.near).not.toBeNull()
     expect(prices.fearGreed).not.toBeNull()
     expect(prices.btcDominance).not.toBeNull()
   })
@@ -96,8 +96,8 @@ describe('DEMO_PORTFOLIO_STATE — prices', () => {
 describe('DEMO_PORTFOLIO_STATE — positions', () => {
   const { positions } = DEMO_PORTFOLIO_STATE
 
-  it('has 8 positions (7 assets + dry powder)', () => {
-    expect(positions).toHaveLength(8)
+  it('has 7 positions (6 assets + dry powder)', () => {
+    expect(positions).toHaveLength(7)
   })
 
   it('all positions have priceUnavailable: false', () => {
@@ -149,13 +149,13 @@ describe('DEMO_PORTFOLIO_STATE — positions', () => {
 describe('DEMO_PORTFOLIO_STATE — allocations', () => {
   const { allocations } = DEMO_PORTFOLIO_STATE
 
-  it('has 8 allocations', () => {
-    expect(allocations).toHaveLength(8)
+  it('has 7 allocations', () => {
+    expect(allocations).toHaveLength(7)
   })
 
-  it('follows the fixed display order: BTC MSTR ONDO LINK UNI NEAR ETH CASH', () => {
+  it('follows the fixed display order: BTC MSTR ONDO LINK UNI NEAR CASH', () => {
     const keys = allocations.map(a => a.key)
-    expect(keys).toEqual(['btc', 'mstr', 'ondo', 'link', 'uni', 'near', 'eth', 'dry'])
+    expect(keys).toEqual(['btc', 'mstr', 'ondo', 'link', 'uni', 'near', 'dry'])
   })
 
   it('all allocations have numeric currentPct', () => {

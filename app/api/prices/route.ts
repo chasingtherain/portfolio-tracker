@@ -4,7 +4,7 @@ import type { Prices } from '@/lib/types'
 
 const COINGECKO_PRICE_URL =
   'https://api.coingecko.com/api/v3/simple/price' +
-  '?ids=bitcoin,chainlink,ondo-finance,uniswap,near-protocol,ethereum&vs_currencies=usd'
+  '?ids=bitcoin,chainlink,ondo-finance,uniswap,near-protocol&vs_currencies=usd'
 
 const COINGECKO_GLOBAL_URL = 'https://api.coingecko.com/api/v3/global'
 
@@ -39,23 +39,21 @@ export async function fetchPrices(): Promise<Prices> {
   const fetchedAt = new Date().toISOString()
 
   // ---------------------------------------------------------------------------
-  // CoinGecko simple/price — BTC, LINK, ONDO, UNI, NEAR, ETH
+  // CoinGecko simple/price — BTC, LINK, ONDO, UNI, NEAR
   // ---------------------------------------------------------------------------
   let btc:  number | null = null
   let link: number | null = null
   let ondo: number | null = null
   let uni:  number | null = null
   let near: number | null = null
-  let eth:  number | null = null
 
   if (cgPrices.status === 'fulfilled') {
     const d = cgPrices.value as Record<string, { usd: number }>
-    btc  = d?.bitcoin?.usd        ?? null
-    link = d?.chainlink?.usd      ?? null
+    btc  = d?.bitcoin?.usd          ?? null
+    link = d?.chainlink?.usd        ?? null
     ondo = d?.['ondo-finance']?.usd ?? null
-    uni  = d?.uniswap?.usd        ?? null
+    uni  = d?.uniswap?.usd          ?? null
     near = d?.['near-protocol']?.usd ?? null
-    eth  = d?.ethereum?.usd       ?? null
   }
 
   // ---------------------------------------------------------------------------
@@ -96,7 +94,7 @@ export async function fetchPrices(): Promise<Prices> {
     }
   }
 
-  return { btc, mstr, link, ondo, uni, near, eth, fearGreed, btcDominance, fetchedAt }
+  return { btc, mstr, link, ondo, uni, near, fearGreed, btcDominance, fetchedAt }
 }
 
 export async function GET(): Promise<Response> {

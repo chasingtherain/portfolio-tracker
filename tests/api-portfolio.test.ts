@@ -39,7 +39,6 @@ const MOCK_PRICES: Prices = {
   ondo:         1.18,
   uni:          12.8,
   near:         5.45,
-  eth:          3080,
   fearGreed:    72,
   btcDominance: 56.2,
   fetchedAt:    '2025-01-15T10:30:00.000Z',
@@ -52,7 +51,6 @@ const MOCK_HOLDINGS: Holdings = {
   uni:       { qty: 800,   costBasis: 8 },
   link:      { qty: 600,   costBasis: 12 },
   ondo:      { qty: 8000,  costBasis: 0.8 },
-  eth:       { qty: 2.5,   costBasis: 2200 },
   dryPowder: 12000,
   nupl:      0.55,
   updatedAt: '2025-01-15T09:45:00.000Z',
@@ -148,7 +146,7 @@ describe('GET /api/portfolio — live mode', () => {
     const res = await GET()
     const { allocations } = await res.json()
     const keys = allocations.map((a: { key: string }) => a.key)
-    expect(keys).toEqual(['btc', 'mstr', 'ondo', 'link', 'uni', 'near', 'eth', 'dry'])
+    expect(keys).toEqual(['btc', 'mstr', 'ondo', 'link', 'uni', 'near', 'dry'])
   })
 
   it('triggers has 4 entries', async () => {

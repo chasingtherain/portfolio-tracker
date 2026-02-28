@@ -20,7 +20,6 @@ const TARGET_ALLOCATIONS: Record<string, number> = {
   uni:   7,
   dry:   4,
   near:  0,
-  eth:   0,
 }
 
 const ASSET_COLORS: Record<string, string> = {
@@ -30,7 +29,6 @@ const ASSET_COLORS: Record<string, string> = {
   link: '#06b6d4',
   uni:  '#ec4899',
   near: 'var(--text-dim)',
-  eth:  'var(--text-dim)',
   dry:  'var(--text-muted)',
 }
 
@@ -41,12 +39,11 @@ const ALLOCATION_LABELS: Record<string, string> = {
   link: 'LINK',
   uni:  'UNI',
   near: 'NEAR',
-  eth:  'ETH',
   dry:  'CASH',
 }
 
 // Ordered list for allocation display (not sorted by value like positions)
-const ALLOCATION_ORDER = ['btc', 'mstr', 'ondo', 'link', 'uni', 'near', 'eth', 'dry']
+const ALLOCATION_ORDER = ['btc', 'mstr', 'ondo', 'link', 'uni', 'near', 'dry']
 
 // ---------------------------------------------------------------------------
 // Basic calculations
@@ -109,7 +106,6 @@ export function calcTotalPnl(
     { holding: holdings.uni,  price: prices.uni },
     { holding: holdings.link, price: prices.link },
     { holding: holdings.ondo, price: prices.ondo },
-    { holding: holdings.eth,  price: prices.eth },
   ]
 
   let totalPnl = 0
@@ -245,7 +241,6 @@ const CRYPTO_ASSETS = [
   { label: 'Uniswap',       ticker: 'UNI',  holdingKey: 'uni'  as const, priceKey: 'uni'  as const },
   { label: 'Chainlink',     ticker: 'LINK', holdingKey: 'link' as const, priceKey: 'link' as const },
   { label: 'Ondo Finance',  ticker: 'ONDO', holdingKey: 'ondo' as const, priceKey: 'ondo' as const },
-  { label: 'Ethereum',      ticker: 'ETH',  holdingKey: 'eth'  as const, priceKey: 'eth'  as const },
 ]
 
 /**

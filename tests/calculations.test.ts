@@ -29,7 +29,6 @@ const mockHoldings: Holdings = {
   uni:  { qty: 2400,   costBasis: 7.2923 },
   link: { qty: 84.6,   costBasis: 8.6884 },
   ondo: { qty: 0,      costBasis: 0.27 },
-  eth:  { qty: 0.37,   costBasis: 2000 },
   dryPowder: 5000,
   nupl: 0.35,
   updatedAt: '2026-02-21T00:00:00Z',
@@ -42,7 +41,6 @@ const mockPrices: Prices = {
   uni:          10,
   link:         18,
   ondo:         1.0,
-  eth:          2800,
   fearGreed:    45,
   btcDominance: 58.4,
   fetchedAt:    '2026-02-21T17:30:00Z',
@@ -372,9 +370,9 @@ describe('calcAllTriggers', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildPositions', () => {
-  it('returns 8 positions (7 crypto + dry powder)', () => {
+  it('returns 7 positions (6 crypto + dry powder)', () => {
     const positions = buildPositions(mockHoldings, mockPrices)
-    expect(positions).toHaveLength(8)
+    expect(positions).toHaveLength(7)
   })
 
   it('positions are sorted by value descending', () => {
@@ -437,10 +435,10 @@ describe('buildAllocations', () => {
     const positions = buildPositions(mockHoldings, mockPrices)
     const totalValue = positions.reduce((s, p) => s + (p.value ?? 0), 0)
     const allocations = buildAllocations(positions, totalValue)
-    expect(allocations).toHaveLength(8)
+    expect(allocations).toHaveLength(7)
     expect(allocations[0].key).toBe('btc')
     expect(allocations[1].key).toBe('mstr')
-    expect(allocations[7].key).toBe('dry')
+    expect(allocations[6].key).toBe('dry')
   })
 
   it('BTC currentPct is computed from value / totalValue', () => {
