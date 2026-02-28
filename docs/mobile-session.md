@@ -9,8 +9,26 @@ On mobile, a two-step flow replaces it:
 1. User authenticates with their password → server issues a short-lived session token
 2. User submits holdings with that token → token is consumed (one-time use) and deleted
 
-This prevents a picked-up phone from being used to make edits after the owner
-has walked away — even if the Edit Holdings panel is still open.
+This prevents a picked-up phone from being used to make a second edit after the
+owner has already saved — the token is destroyed server-side on first use.
+
+---
+
+## What this feature does and does not do
+
+**Does:** After a successful save on mobile, the session token is consumed. Any
+attempt to replay that exact submission (same token) will get a 401. A new save
+requires the user to tap Save again, which triggers a fresh token issuance.
+
+**Does not:** Log the user out or clear their password from the form after a
+period of inactivity. The password lives in React component state — it persists
+for as long as the browser tab stays open, regardless of how much time passes.
+A user who leaves for 2 hours and returns to the same open tab will find their
+password still in the form field and can save again normally.
+
+If clearing the password after idle time is desired, that is a separate feature:
+a client-side idle timer that calls `setForm(prev => ({ ...prev, password: '' }))`
+after N minutes of no interaction. That is not implemented here.
 
 ---
 
@@ -19,9 +37,16 @@ has walked away — even if the Edit Holdings panel is still open.
 The current model has no session state at all — the password is submitted on
 every write and validated synchronously. That's fine for desktop, where the risk
 of a hijacked browser tab is low. On mobile the threat model is different:
-physical access. A 5-minute window plus one-use destruction limits the blast
-radius of that access without adding full auth infrastructure (cookies, JWTs,
-refresh tokens) that would be overkill for a single-user personal tool.
+physical access. One-use token destruction limits the blast radius of that access
+(a grabbed phone cannot replay a prior save) without adding full auth
+infrastructure (cookies, JWTs, refresh tokens) that would be overkill for a
+single-user personal tool.
+
+The 5-minute TTL on the KV token is a safety net, not the primary security
+mechanism. In the happy path the token is created and consumed within
+milliseconds — the TTL only matters if step 2 (the holdings write) never
+arrives due to a network drop or browser crash, preventing a dangling orphan
+token from sitting in KV indefinitely.
 
 ---
 
