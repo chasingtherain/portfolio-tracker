@@ -30,6 +30,46 @@ function deltaDisplay(before: number, after: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Tooltip
+// ---------------------------------------------------------------------------
+
+function Tooltip({ children }: { children: React.ReactNode }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span style={{ cursor: 'help', color: 'var(--text-dim)', fontSize: 10, marginLeft: 4, lineHeight: 1 }}>
+        ⓘ
+      </span>
+      {show && (
+        <div style={{
+          position:      'absolute',
+          top:           'calc(100% + 6px)',
+          left:           0,
+          zIndex:         200,
+          background:    'var(--surface)',
+          border:        '1px solid var(--border)',
+          borderRadius:   6,
+          padding:       '10px 12px',
+          width:          260,
+          fontFamily:    'var(--mono)',
+          fontSize:       11,
+          color:         'var(--text-muted)',
+          lineHeight:     1.7,
+          boxShadow:     '0 4px 16px rgba(0,0,0,0.4)',
+          pointerEvents: 'none',
+        }}>
+          {children}
+        </div>
+      )}
+    </span>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
@@ -70,11 +110,55 @@ function Badge({
   )
 }
 
-function SnapshotRow({ label, value }: { label: string; value: string }) {
+function SnapshotRow({ label, value, tooltip }: { label: string; value: string; tooltip?: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-      <span style={{ color: 'var(--text-dim)', fontFamily: 'var(--mono)', fontSize: 11 }}>{label}</span>
+      <span style={{ color: 'var(--text-dim)', fontFamily: 'var(--mono)', fontSize: 11, display: 'flex', alignItems: 'center' }}>
+        {label}
+        {tooltip && <Tooltip>{tooltip}</Tooltip>}
+      </span>
       <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--mono)', fontSize: 11 }}>{value}</span>
+    </div>
+  )
+}
+
+const STAGE_LADDER = [
+  { key: 'accumulate', label: 'ACCUMULATE', range: '< $120K' },
+  { key: 'distribute', label: 'DISTRIBUTE', range: '$120K – $175K' },
+  { key: 'reduce',     label: 'REDUCE',     range: '$175K – $225K' },
+  { key: 'exit',       label: 'EXIT',       range: '≥ $225K' },
+]
+
+const STAGE_DESCRIPTIONS: Record<string, string> = {
+  accumulate: 'BTC is well below cycle peak territory.\nStrategy: add to positions across the\nportfolio. Buying here is aligned\nwith the plan.',
+  distribute: 'BTC is in price discovery approaching\npotential cycle highs. Strategy: take\nprofits, shift to cash. No new buys —\npurchases here are flagged MISALIGNED.',
+  reduce:     'BTC is approaching ~80% of the Pi Cycle\nTop signal. Historically this marks the\nfinal bull phase. Strategy: actively cut\nposition sizes. Buying here is a\nsignificant strategy violation.',
+  exit:       'BTC is at ~90% of the Pi Cycle Top signal\n— within striking distance of the\npredicted cycle top. Strategy: exit\ncrypto positions, hold cash only. Any\nbuying here is maximally misaligned\nwith the plan.',
+}
+
+function StageTooltip({ stage }: { stage: string }) {
+  return (
+    <div>
+      <div style={{ whiteSpace: 'pre-line', marginBottom: 10 }}>
+        {STAGE_DESCRIPTIONS[stage]}
+      </div>
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {STAGE_LADDER.map(s => (
+          <div
+            key={s.key}
+            style={{
+              display: 'flex',
+              gap:      8,
+              color:    s.key === stage ? 'var(--text)' : 'var(--text-dim)',
+              fontWeight: s.key === stage ? 600 : 400,
+            }}
+          >
+            <span style={{ width: 10 }}>{s.key === stage ? '◉' : '○'}</span>
+            <span style={{ minWidth: 88 }}>{s.label}</span>
+            <span>{s.range}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -181,16 +265,36 @@ function DecisionCard({ entry, onNotesChange }: {
             gap:            6,
           }}
         >
-          <SnapshotRow label="BTC PRICE"     value={`$${entry.snapshot.btcPrice.toLocaleString()}`} />
-          <SnapshotRow label="FEAR & GREED"  value={String(entry.snapshot.fearGreed)} />
-          <SnapshotRow label="BTC DOMINANCE" value={`${entry.snapshot.btcDominance.toFixed(1)}%`} />
-          <SnapshotRow label="NUPL"          value={entry.snapshot.nupl.toFixed(2)} />
-          <SnapshotRow label="STAGE"         value={entry.snapshot.positionStage.toUpperCase()} />
-          <SnapshotRow label="ZONE"          value={entry.snapshot.btcPriceZone} />
+          <SnapshotRow
+            label="BTC PRICE"
+            value={`$${entry.snapshot.btcPrice.toLocaleString()}`}
+            tooltip="BTC spot price at the moment this decision was recorded. Used to determine the cycle phase and evaluate all trigger conditions."
+          />
+          <SnapshotRow
+            label="FEAR & GREED"
+            value={String(entry.snapshot.fearGreed)}
+            tooltip={'Market sentiment index (0–100)\n\n 0–24   Extreme Fear  ← buy zone\n25–49   Fear\n50–74   Greed         ← caution ≥65\n75–100  Extreme Greed ← exit ≥80'}
+          />
+          <SnapshotRow
+            label="BTC DOMINANCE"
+            value={`${entry.snapshot.btcDominance.toFixed(1)}%`}
+            tooltip={'BTC\'s share of total crypto market cap.\n\nRising → BTC outperforming altcoins.\nFalling → altcoin season.'}
+          />
+          <SnapshotRow
+            label="NUPL"
+            value={entry.snapshot.nupl.toFixed(2)}
+            tooltip={'Net Unrealized Profit/Loss.\nAggregate market profit positioning.\n\n< 0      Capitulation\n0–0.25   Hope / Rebuilding\n0.25–0.5 Optimism\n0.5–0.75 Belief / Denial  ← top\n0.75+    Euphoria          ← exit signal'}
+          />
+          <SnapshotRow
+            label="CYCLE PHASE"
+            value={entry.snapshot.positionStage.toUpperCase()}
+            tooltip={<StageTooltip stage={entry.snapshot.positionStage} />}
+          />
           {entry.snapshot.activeTriggers.length > 0 && (
             <SnapshotRow
               label="ACTIVE TRIGGERS"
               value={entry.snapshot.activeTriggers.join(', ')}
+              tooltip="Strategy signals that were active at the time of this decision. Fired triggers elevate alignment scrutiny — buying while exit signals are live is flagged MISALIGNED."
             />
           )}
         </div>

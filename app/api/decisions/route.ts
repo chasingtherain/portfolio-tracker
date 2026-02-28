@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 import { kv }             from '@vercel/kv'
 import { fetchPrices }    from '@/app/api/prices/route'
 import { getHoldings }    from '@/lib/kv'
-import { calcAllTriggers, calcProceedsSplit } from '@/lib/calculations'
+import { calcAllTriggers } from '@/lib/calculations'
 import { scoreAlignment } from '@/lib/alignment'
 import { writeDecision, readDecisions, SCORE_CACHE_KEY } from '@/lib/decisions'
 import type { DecisionEntry, MarketSnapshot } from '@/lib/decisions.types'
@@ -13,22 +13,20 @@ import type { DecisionEntry, MarketSnapshot } from '@/lib/decisions.types'
 // ---------------------------------------------------------------------------
 
 /**
- * Maps the BTC price zone (from calcProceedsSplit) to the four position stages
- * used by the alignment engine.
+ * Derives the portfolio strategy phase from BTC price.
+ * Thresholds are independent of calcProceedsSplit — these represent
+ * cycle phase boundaries, not proceeds allocation zones.
  *
- * This is the bridge between the existing strategy layer and the new decisions
- * feature. No positionStage field exists in the current data model — we derive
- * it on the fly from BTC price, the same way the dashboard derives its phase.
+ *   ACCUMULATE   < $120K          — well below cycle peak
+ *   DISTRIBUTE   $120K – $175K    — price discovery, take profits
+ *   REDUCE       $175K – $225K    — ~80% of Pi Cycle Top signal
+ *   EXIT         ≥ $225K          — ~90% of Pi Cycle Top signal
  */
 function derivePositionStage(btcPrice: number): MarketSnapshot['positionStage'] {
-  const { zone } = calcProceedsSplit(btcPrice)
-  const map: Record<string, MarketSnapshot['positionStage']> = {
-    below_150k: 'accumulate',
-    '150k_250k': 'distribute',
-    '250k_350k': 'reduce',
-    above_350k:  'exit',
-  }
-  return map[zone] ?? 'accumulate'
+  if (btcPrice < 120_000) return 'accumulate'
+  if (btcPrice < 175_000) return 'distribute'
+  if (btcPrice < 225_000) return 'reduce'
+  return 'exit'
 }
 
 /**
