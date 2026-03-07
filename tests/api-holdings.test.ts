@@ -229,15 +229,15 @@ describe('PUT /api/holdings — rate limiting', () => {
   })
   afterEach(() => vi.unstubAllEnvs())
 
-  it('returns 429 when rate limit is reached (count >= 5)', async () => {
-    mockKvGet.mockResolvedValue(5)    // already at limit
+  it('returns 429 when rate limit is reached (count >= 30)', async () => {
+    mockKvGet.mockResolvedValue(30)    // already at limit
     const req = makePutRequest(VALID_PUT_BODY)
     const res = await PUT(req)
     expect(res.status).toBe(429)
   })
 
-  it('allows request when count is 4 (one below limit)', async () => {
-    mockKvGet.mockResolvedValue(4)
+  it('allows request when count is 29 (one below limit)', async () => {
+    mockKvGet.mockResolvedValue(29)
     const req = makePutRequest(VALID_PUT_BODY)
     const res = await PUT(req)
     expect(res.status).toBe(200)
@@ -261,7 +261,7 @@ describe('PUT /api/holdings — rate limiting', () => {
   })
 
   it('does not write holdings when rate limited', async () => {
-    mockKvGet.mockResolvedValue(5)
+    mockKvGet.mockResolvedValue(30)
     const req = makePutRequest(VALID_PUT_BODY)
     await PUT(req)
     expect(mockSetHoldings).not.toHaveBeenCalled()

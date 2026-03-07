@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 import { kv } from '@vercel/kv'
 
 // Shared rate-limit constants — same window as /api/holdings
-const RATE_LIMIT         = 5
+const RATE_LIMIT         = 30
 const RATE_LIMIT_TTL_SECS = 900
 const SESSION_TTL_SECS   = 300   // 5-minute one-time-use token
 
@@ -24,7 +24,7 @@ function isMobileUA(ua: string | null): boolean {
 //
 // Flow:
 //   1. Reject non-mobile User-Agent → 403
-//   2. Rate-limit by IP (same 5/15-min window as /api/holdings)
+//   2. Rate-limit by IP (same 30/15-min window as /api/holdings)
 //   3. Validate password → 401 on mismatch
 //   4. Generate crypto.randomUUID() token
 //   5. Store in KV: session:<token> = 1 with 300s TTL

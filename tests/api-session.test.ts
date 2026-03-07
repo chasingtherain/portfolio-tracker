@@ -140,15 +140,15 @@ describe('POST /api/session — rate limiting', () => {
   })
   afterEach(() => vi.unstubAllEnvs())
 
-  it('returns 429 when rate limit is reached (count >= 5)', async () => {
-    mockKvGet.mockResolvedValue(5)
+  it('returns 429 when rate limit is reached (count >= 30)', async () => {
+    mockKvGet.mockResolvedValue(30)
     const req = makePostRequest({ password: 'testpass' })
     const res = await POST(req)
     expect(res.status).toBe(429)
   })
 
-  it('allows request when count is 4 (one below limit)', async () => {
-    mockKvGet.mockResolvedValue(4)
+  it('allows request when count is 29 (one below limit)', async () => {
+    mockKvGet.mockResolvedValue(29)
     const req = makePostRequest({ password: 'testpass' })
     const res = await POST(req)
     expect(res.status).toBe(200)

@@ -6,9 +6,9 @@ import { getHoldings, setHoldings, toClientHoldings, resetChecklist } from '@/li
 
 type AuthField = { password: string } | { token: string }
 
-// 5 write attempts per 15-minute window per IP.
+// 30 write attempts per 15-minute window per IP.
 // Appropriate for a single-user personal tool.
-const RATE_LIMIT = 5
+const RATE_LIMIT = 30
 const RATE_LIMIT_TTL_SECS = 900
 
 // ---------------------------------------------------------------------------
