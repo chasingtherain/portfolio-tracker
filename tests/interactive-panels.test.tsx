@@ -397,6 +397,29 @@ describe('EditHoldingsPanel — save', () => {
     enterPassword()
     expect(saveBtn).not.toBeDisabled()
   })
+
+  it('shows warning when holdings save succeeds but decision logging fails', async () => {
+    mockFetch
+      .mockResolvedValueOnce(mockHoldingsGet())
+      .mockResolvedValueOnce(mockOkPut())
+      .mockResolvedValueOnce({
+        ok: false,
+        text: async () => 'Decision route failed',
+      })
+
+    render(<EditHoldingsPanel onHoldingsSaved={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
+
+    fireEvent.change(screen.getByTestId('input-btc-qty'), { target: { value: '3.3' } })
+    enterPassword()
+    fireEvent.click(screen.getByTestId('edit-holdings-save'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-holdings-success')).toBeInTheDocument()
+      expect(screen.getByTestId('edit-holdings-warning')).toHaveTextContent('Holdings saved, but journal update failed: Decision route failed')
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------

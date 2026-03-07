@@ -85,6 +85,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [error,    setError]    = useState<string | null>(null)
   const [success,  setSuccess]  = useState(false)
+  const [decisionWarning, setDecisionWarning] = useState<string | null>(null)
 
   // Tracks the qty values last loaded from the server.
   // Used by logDecisions to detect which assets actually changed.
@@ -171,6 +172,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
     e.preventDefault()
     setError(null)
     setSuccess(false)
+    setDecisionWarning(null)
 
     if (!numericValidation.passwordValid) {
       setError('Password is required')
@@ -247,7 +249,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
 
       // Log decisions before notifying the parent so DecisionTimeline refresh
       // sees newly written entries instead of racing ahead of this write.
-      await logDecisions(holdingFields)
+      const decisionError = await logDecisions(holdingFields)
       serverQty.current = {
         btc: holdingFields.btc.qty,
         mstr: holdingFields.mstr.qty,
@@ -255,6 +257,9 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
         uni: holdingFields.uni.qty,
         link: holdingFields.link.qty,
         ondo: holdingFields.ondo.qty,
+      }
+      if (decisionError) {
+        setDecisionWarning(`Holdings saved, but journal update failed: ${decisionError}`)
       }
       onHoldingsSaved()
       setSuccess(true)
@@ -265,33 +270,46 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
     }
   }
 
-  async function logDecisions(saved: Record<AssetKey, { qty: number }>) {
-    try {
-      const assetKeys: AssetKey[] = ['btc', 'mstr', 'near', 'uni', 'link', 'ondo']
-      await Promise.allSettled(
-        assetKeys.map(async (key) => {
-          const priorQty = serverQty.current[key] || 0
-          const newQty   = saved[key].qty || 0
+  async function logDecisions(saved: Record<AssetKey, { qty: number }>): Promise<string | null> {
+    const assetKeys: AssetKey[] = ['btc', 'mstr', 'near', 'uni', 'link', 'ondo']
 
-          if (priorQty === newQty) return  // no change — nothing to log
+    const changed = assetKeys.filter((key) => {
+      const priorQty = serverQty.current[key] || 0
+      const newQty = saved[key].qty || 0
+      return priorQty !== newQty
+    })
 
-          const action: 'buy' | 'sell' = newQty > priorQty ? 'buy' : 'sell'
+    if (changed.length === 0) return null
 
-          await fetch('/api/decisions', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-              asset:        key.toUpperCase(),
-              action,
-              amountBefore: priorQty,
-              amountAfter:  newQty,
-            }),
-          })
+    const results = await Promise.allSettled(
+      changed.map(async (key) => {
+        const priorQty = serverQty.current[key] || 0
+        const newQty   = saved[key].qty || 0
+        const action: 'buy' | 'sell' = newQty > priorQty ? 'buy' : 'sell'
+
+        const res = await fetch('/api/decisions', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            asset:        key.toUpperCase(),
+            action,
+            amountBefore: priorQty,
+            amountAfter:  newQty,
+          }),
         })
-      )
-    } catch {
-      // Swallow — decision logging is best-effort
-    }
+
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(text || `HTTP ${res.status}`)
+        }
+      })
+    )
+
+    const firstFailure = results.find(r => r.status === 'rejected')
+    if (!firstFailure || firstFailure.status !== 'rejected') return null
+    return firstFailure.reason instanceof Error
+      ? firstFailure.reason.message
+      : 'unknown error'
   }
 
   return (
@@ -515,6 +533,21 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
               }}
             >
               Holdings saved.
+            </div>
+          )}
+
+          {decisionWarning && (
+            <div
+              data-testid="edit-holdings-warning"
+              className="mono"
+              style={{
+                marginTop:  10,
+                fontSize:   12,
+                color:      'var(--orange)',
+                lineHeight: 1.4,
+              }}
+            >
+              {decisionWarning}
             </div>
           )}
         </form>
