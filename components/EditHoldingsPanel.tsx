@@ -77,6 +77,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
   const [form,     setForm]     = useState<FormState>(defaultForm())
   const [isSaving, setIsSaving] = useState(false)
   const [error,    setError]    = useState<string | null>(null)
+  const [success,  setSuccess]  = useState(false)
 
   // Tracks the qty values last loaded from the server.
   // Used by logDecisions to detect which assets actually changed.
@@ -131,6 +132,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
     e.preventDefault()
     setIsSaving(true)
     setError(null)
+    setSuccess(false)
 
     const holdingFields = {
       btc:       { qty: parseFloat(form.assets.btc.qty),  costBasis: parseFloat(form.assets.btc.costBasis)  },
@@ -199,6 +201,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
       void logDecisions(holdingFields)
 
       onHoldingsSaved()
+      setSuccess(true)
     } catch {
       setError('Connection error — save failed')
     } finally {
@@ -421,6 +424,21 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
               }}
             >
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div
+              data-testid="edit-holdings-success"
+              className="mono"
+              style={{
+                marginTop:  10,
+                fontSize:   12,
+                color:      'var(--green)',
+                lineHeight: 1.4,
+              }}
+            >
+              Holdings saved.
             </div>
           )}
         </form>
