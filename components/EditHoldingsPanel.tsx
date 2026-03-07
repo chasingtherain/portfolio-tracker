@@ -245,11 +245,17 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
         }
       }
 
-      // Log a decision entry for each asset whose qty changed.
-      // We compare qty against what was pre-populated from the server on mount.
-      // Fire-and-forget: decision logging failures must never block the save flow.
-      void logDecisions(holdingFields)
-
+      // Log decisions before notifying the parent so DecisionTimeline refresh
+      // sees newly written entries instead of racing ahead of this write.
+      await logDecisions(holdingFields)
+      serverQty.current = {
+        btc: holdingFields.btc.qty,
+        mstr: holdingFields.mstr.qty,
+        near: holdingFields.near.qty,
+        uni: holdingFields.uni.qty,
+        link: holdingFields.link.qty,
+        ondo: holdingFields.ondo.qty,
+      }
       onHoldingsSaved()
       setSuccess(true)
     } catch {
