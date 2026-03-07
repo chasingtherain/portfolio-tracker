@@ -341,6 +341,22 @@ describe('EditHoldingsPanel — save', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1))
   })
 
+  it('shows success message after successful save', async () => {
+    mockFetch
+      .mockResolvedValueOnce(mockHoldingsGet())
+      .mockResolvedValueOnce(mockOkPut())
+
+    render(<EditHoldingsPanel onHoldingsSaved={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
+
+    fireEvent.click(screen.getByTestId('edit-holdings-save'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-holdings-success')).toHaveTextContent('Holdings saved.')
+    })
+  })
+
   it('shows error message on 401 response', async () => {
     mockFetch
       .mockResolvedValueOnce(mockHoldingsGet())
