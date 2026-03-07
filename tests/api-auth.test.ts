@@ -63,16 +63,16 @@ describe('POST /api/auth — desktop cookie lifetime', () => {
   beforeEach(() => vi.stubEnv('HOLDINGS_PASSWORD', 'testpass'))
   afterEach(() => vi.unstubAllEnvs())
 
-  it('sets a 7-day cookie for a desktop user-agent', async () => {
+  it('sets a 5-minute cookie for a desktop user-agent', async () => {
     const res = await POST(makePostRequest({ password: 'testpass' }, DESKTOP_UA))
     const cookie = res.headers.get('set-cookie') ?? ''
-    expect(parseCookieMaxAge(cookie)).toBe(7 * 24 * 60 * 60)
+    expect(parseCookieMaxAge(cookie)).toBe(5 * 60)
   })
 
-  it('sets a 7-day cookie when user-agent is absent', async () => {
+  it('sets a 5-minute cookie when user-agent is absent', async () => {
     const res = await POST(makePostRequest({ password: 'testpass' }, null))
     const cookie = res.headers.get('set-cookie') ?? ''
-    expect(parseCookieMaxAge(cookie)).toBe(7 * 24 * 60 * 60)
+    expect(parseCookieMaxAge(cookie)).toBe(5 * 60)
   })
 })
 
@@ -106,5 +106,29 @@ describe('POST /api/auth — mobile cookie lifetime', () => {
     const res = await POST(makePostRequest({ password: 'testpass' }, MOBILE_UA))
     const cookie = res.headers.get('set-cookie') ?? ''
     expect(cookie).toContain('HttpOnly')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Session cookie mode (re-auth after browser/app quit)
+// ---------------------------------------------------------------------------
+
+describe('POST /api/auth — session cookie mode', () => {
+  beforeEach(() => {
+    vi.stubEnv('HOLDINGS_PASSWORD', 'testpass')
+    vi.stubEnv('AUTH_SESSION_ON_CLOSE', 'true')
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('does not set Max-Age for desktop when AUTH_SESSION_ON_CLOSE=true', async () => {
+    const res = await POST(makePostRequest({ password: 'testpass' }, DESKTOP_UA))
+    const cookie = res.headers.get('set-cookie') ?? ''
+    expect(cookie).not.toContain('Max-Age=')
+  })
+
+  it('does not set Max-Age for mobile when AUTH_SESSION_ON_CLOSE=true', async () => {
+    const res = await POST(makePostRequest({ password: 'testpass' }, MOBILE_UA))
+    const cookie = res.headers.get('set-cookie') ?? ''
+    expect(cookie).not.toContain('Max-Age=')
   })
 })

@@ -6,14 +6,23 @@ export const runtime = 'nodejs'
 // Cookie lifetime:
 //   Mobile (detected by User-Agent): 5 minutes — short window to limit
 //   exposure if a phone is picked up by someone else.
-//   Desktop: 7 days — normal persistent session.
+//   Desktop: 5 minutes — same short window as mobile.
+//
+// Optional mode:
+//   AUTH_SESSION_ON_CLOSE=true → issue a session cookie (no Max-Age),
+//   so users must re-authenticate after fully quitting the browser/app.
 
-const DESKTOP_MAX_AGE = 7 * 24 * 60 * 60  // 7 days in seconds
+const DESKTOP_MAX_AGE = 5 * 60             // 5 minutes in seconds
 const MOBILE_MAX_AGE  = 5 * 60             // 5 minutes in seconds
 
 function isMobileUA(ua: string | null): boolean {
   if (!ua) return false
   return /mobile|android|iphone|ipad|ipod/i.test(ua)
+}
+
+function shouldUseSessionCookie(): boolean {
+  const value = process.env.AUTH_SESSION_ON_CLOSE?.trim().toLowerCase()
+  return value === '1' || value === 'true' || value === 'yes' || value === 'on'
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -38,8 +47,20 @@ export async function POST(request: Request): Promise<Response> {
   const maxAge  = isMobileUA(ua) ? MOBILE_MAX_AGE : DESKTOP_MAX_AGE
 
   // Secure flag only in production — localhost uses HTTP so Secure would block the cookie.
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-  const cookie = `portfolio-auth=${process.env.HOLDINGS_PASSWORD}; HttpOnly${secure}; SameSite=Strict; Max-Age=${maxAge}; Path=/`
+  const secure = process.env.NODE_ENV === 'production'
+  const cookieParts = [
+    `portfolio-auth=${process.env.HOLDINGS_PASSWORD}`,
+    'HttpOnly',
+    secure ? 'Secure' : null,
+    'SameSite=Strict',
+    'Path=/',
+  ]
+
+  if (!shouldUseSessionCookie()) {
+    cookieParts.push(`Max-Age=${maxAge}`)
+  }
+
+  const cookie = cookieParts.filter(Boolean).join('; ')
 
   return new Response('OK', {
     status: 200,
