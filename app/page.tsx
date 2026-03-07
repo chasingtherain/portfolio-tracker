@@ -191,7 +191,7 @@ export default function Page() {
           </div>
 
           {/* Decision journal — live mode only, hidden in demo */}
-          <DecisionTimeline mode={portfolioState.mode} />
+          <DecisionTimeline mode={portfolioState.mode} savedAt={holdingsSavedAt} />
         </>
       )}
     </div>

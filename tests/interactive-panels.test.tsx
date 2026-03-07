@@ -304,6 +304,10 @@ describe('EditHoldingsPanel — pre-population', () => {
 // ---------------------------------------------------------------------------
 
 describe('EditHoldingsPanel — save', () => {
+  function enterPassword(value = 'testpass') {
+    fireEvent.change(screen.getByTestId('input-password'), { target: { value } })
+  }
+
   it('calls PUT /api/holdings on form submit', async () => {
     // First call: GET /api/holdings (mount)
     // Second call: PUT /api/holdings (save)
@@ -316,6 +320,7 @@ describe('EditHoldingsPanel — save', () => {
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
 
+    enterPassword()
     fireEvent.click(screen.getByTestId('edit-holdings-save'))
 
     await waitFor(() => {
@@ -336,6 +341,7 @@ describe('EditHoldingsPanel — save', () => {
     fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
     await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
 
+    enterPassword()
     fireEvent.click(screen.getByTestId('edit-holdings-save'))
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1))
@@ -350,6 +356,7 @@ describe('EditHoldingsPanel — save', () => {
     fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
     await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
 
+    enterPassword()
     fireEvent.click(screen.getByTestId('edit-holdings-save'))
 
     await waitFor(() => {
@@ -369,11 +376,26 @@ describe('EditHoldingsPanel — save', () => {
     fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
     await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
 
+    enterPassword()
     fireEvent.click(screen.getByTestId('edit-holdings-save'))
 
     await waitFor(() => {
       expect(screen.getByTestId('edit-holdings-error')).toHaveTextContent('Unauthorized')
     })
+  })
+
+  it('disables save until password is provided', async () => {
+    mockFetch.mockResolvedValueOnce(mockHoldingsGet())
+
+    render(<EditHoldingsPanel onHoldingsSaved={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('edit-holdings-toggle'))
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/holdings'))
+
+    const saveBtn = screen.getByTestId('edit-holdings-save')
+    expect(saveBtn).toBeDisabled()
+
+    enterPassword()
+    expect(saveBtn).not.toBeDisabled()
   })
 })
 

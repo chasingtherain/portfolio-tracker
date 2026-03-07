@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { ClientHoldings } from '@/lib/types'
 
 type AssetKey = 'btc' | 'mstr' | 'near' | 'uni' | 'link' | 'ondo'
@@ -72,6 +72,13 @@ interface EditHoldingsPanelProps {
   onHoldingsSaved: () => void
 }
 
+function parseNumberInput(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (trimmed === '') return 0
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
   const [isOpen,   setIsOpen]   = useState(false)
   const [form,     setForm]     = useState<FormState>(defaultForm())
@@ -84,6 +91,38 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
   const serverQty = useRef<Record<AssetKey, number>>({
     btc: 0, mstr: 0, near: 0, uni: 0, link: 0, ondo: 0,
   })
+
+  const numericValidation = useMemo(() => {
+    const qty: Record<AssetKey, boolean> = { btc: true, mstr: true, near: true, uni: true, link: true, ondo: true }
+    const costBasis: Record<AssetKey, boolean> = { btc: true, mstr: true, near: true, uni: true, link: true, ondo: true }
+
+    for (const { key } of ASSETS) {
+      const qtyValue = parseNumberInput(form.assets[key].qty)
+      qty[key] = qtyValue !== null && qtyValue >= 0
+
+      const costValue = parseNumberInput(form.assets[key].costBasis)
+      costBasis[key] = costValue !== null && costValue >= 0
+    }
+
+    const dryPowderValue = parseNumberInput(form.dryPowder)
+    const nuplValue = parseNumberInput(form.nupl)
+
+    const dryPowderValid = dryPowderValue !== null && dryPowderValue >= 0
+    const nuplValid = nuplValue !== null
+    const passwordValid = form.password.trim().length > 0
+
+    const hasInvalidAsset = Object.values(qty).some(v => !v) || Object.values(costBasis).some(v => !v)
+    const isValid = !hasInvalidAsset && dryPowderValid && nuplValid
+
+    return {
+      qty,
+      costBasis,
+      dryPowderValid,
+      nuplValid,
+      passwordValid,
+      isValid,
+    }
+  }, [form])
 
   // Pre-populate qty fields from KV on mount.
   // costBasis is server-side only and never returned — user enters it manually.
@@ -130,19 +169,30 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setIsSaving(true)
     setError(null)
     setSuccess(false)
 
+    if (!numericValidation.passwordValid) {
+      setError('Password is required')
+      return
+    }
+
+    if (!numericValidation.isValid) {
+      setError('Please fix highlighted fields before saving')
+      return
+    }
+
+    setIsSaving(true)
+
     const holdingFields = {
-      btc:       { qty: parseFloat(form.assets.btc.qty),  costBasis: parseFloat(form.assets.btc.costBasis)  },
-      mstr:      { qty: parseFloat(form.assets.mstr.qty), costBasis: parseFloat(form.assets.mstr.costBasis) },
-      near:      { qty: parseFloat(form.assets.near.qty), costBasis: parseFloat(form.assets.near.costBasis) },
-      uni:       { qty: parseFloat(form.assets.uni.qty),  costBasis: parseFloat(form.assets.uni.costBasis)  },
-      link:      { qty: parseFloat(form.assets.link.qty), costBasis: parseFloat(form.assets.link.costBasis) },
-      ondo:      { qty: parseFloat(form.assets.ondo.qty), costBasis: parseFloat(form.assets.ondo.costBasis) },
-      dryPowder: parseFloat(form.dryPowder),
-      nupl:      parseFloat(form.nupl),
+      btc:       { qty: parseNumberInput(form.assets.btc.qty)!,  costBasis: parseNumberInput(form.assets.btc.costBasis)!  },
+      mstr:      { qty: parseNumberInput(form.assets.mstr.qty)!, costBasis: parseNumberInput(form.assets.mstr.costBasis)! },
+      near:      { qty: parseNumberInput(form.assets.near.qty)!, costBasis: parseNumberInput(form.assets.near.costBasis)! },
+      uni:       { qty: parseNumberInput(form.assets.uni.qty)!,  costBasis: parseNumberInput(form.assets.uni.costBasis)!  },
+      link:      { qty: parseNumberInput(form.assets.link.qty)!, costBasis: parseNumberInput(form.assets.link.costBasis)! },
+      ondo:      { qty: parseNumberInput(form.assets.ondo.qty)!, costBasis: parseNumberInput(form.assets.ondo.costBasis)! },
+      dryPowder: parseNumberInput(form.dryPowder)!,
+      nupl:      parseNumberInput(form.nupl)!,
     }
 
     // Mobile sessions are two-step: get a one-time token first, then use it for the write.
@@ -300,7 +350,7 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
                     {label}
                   </td>
                   <td style={{ padding: '6px 0 6px 8px' }}>
-                    <input
+                <input
                       data-testid={`input-${key}-qty`}
                       type="number"
                       step="any"
@@ -308,7 +358,11 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
                       value={form.assets[key].qty}
                       onChange={(e) => updateAsset(key, 'qty', e.target.value)}
                       placeholder="0"
-                      style={INPUT}
+                      style={{
+                        ...INPUT,
+                        borderColor: numericValidation.qty[key] ? 'var(--border)' : 'var(--red)',
+                      }}
+                      aria-invalid={!numericValidation.qty[key]}
                     />
                   </td>
                   <td style={{ padding: '6px 0 6px 8px' }}>
@@ -320,7 +374,11 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
                       value={form.assets[key].costBasis}
                       onChange={(e) => updateAsset(key, 'costBasis', e.target.value)}
                       placeholder="0.00"
-                      style={INPUT}
+                      style={{
+                        ...INPUT,
+                        borderColor: numericValidation.costBasis[key] ? 'var(--border)' : 'var(--red)',
+                      }}
+                      aria-invalid={!numericValidation.costBasis[key]}
                     />
                   </td>
                 </tr>
@@ -343,7 +401,11 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
                 value={form.dryPowder}
                 onChange={(e) => setForm((prev) => ({ ...prev, dryPowder: e.target.value }))}
                 placeholder="0"
-                style={INPUT}
+                style={{
+                  ...INPUT,
+                  borderColor: numericValidation.dryPowderValid ? 'var(--border)' : 'var(--red)',
+                }}
+                aria-invalid={!numericValidation.dryPowderValid}
               />
             </label>
 
@@ -358,7 +420,11 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
                 value={form.nupl}
                 onChange={(e) => setForm((prev) => ({ ...prev, nupl: e.target.value }))}
                 placeholder="0.55"
-                style={INPUT}
+                style={{
+                  ...INPUT,
+                  borderColor: numericValidation.nuplValid ? 'var(--border)' : 'var(--red)',
+                }}
+                aria-invalid={!numericValidation.nuplValid}
               />
             </label>
           </div>
@@ -383,7 +449,11 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
                 value={form.password}
                 onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
                 placeholder="••••••"
-                style={INPUT}
+                style={{
+                  ...INPUT,
+                  borderColor: numericValidation.passwordValid ? 'var(--border)' : 'var(--red)',
+                }}
+                aria-invalid={!numericValidation.passwordValid}
                 autoComplete="current-password"
               />
             </label>
@@ -391,18 +461,18 @@ export function EditHoldingsPanel({ onHoldingsSaved }: EditHoldingsPanelProps) {
             <button
               data-testid="edit-holdings-save"
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || !numericValidation.isValid || !numericValidation.passwordValid}
               style={{
-                background:    isSaving ? 'var(--surface2)' : 'var(--orange)',
+                background:    isSaving || !numericValidation.isValid || !numericValidation.passwordValid ? 'var(--surface2)' : 'var(--orange)',
                 border:        'none',
                 borderRadius:   4,
-                color:          isSaving ? 'var(--text-dim)' : '#000',
+                color:          isSaving || !numericValidation.isValid || !numericValidation.passwordValid ? 'var(--text-dim)' : '#000',
                 fontFamily:    'var(--mono)',
                 fontSize:       12,
                 fontWeight:     500,
                 letterSpacing: '0.06em',
                 padding:       '7px 14px',
-                cursor:         isSaving ? 'default' : 'pointer',
+                cursor:         isSaving || !numericValidation.isValid || !numericValidation.passwordValid ? 'default' : 'pointer',
                 whiteSpace:    'nowrap',
                 flexShrink:     0,
               }}

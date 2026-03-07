@@ -360,11 +360,18 @@ const SELECT: React.CSSProperties = {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function DecisionTimeline({ mode }: { mode: 'live' | 'demo' }) {
+export function DecisionTimeline({
+  mode,
+  savedAt = 0,
+}: {
+  mode: 'live' | 'demo'
+  savedAt?: number
+}) {
   const [entries,   setEntries]   = useState<DecisionEntry[]>([])
   const [total,     setTotal]     = useState(0)
   const [page,      setPage]      = useState(0)
   const [loading,   setLoading]   = useState(true)
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
 
   const [asset,     setAsset]     = useState('ALL')
   const [alignment, setAlignment] = useState<'' | Alignment>('')
@@ -390,12 +397,13 @@ export function DecisionTimeline({ mode }: { mode: 'live' | 'demo' }) {
       const data = await res.json() as { entries: DecisionEntry[]; total: number }
       setEntries(data.entries)
       setTotal(data.total)
+      setLastUpdatedAt(Date.now())
     } catch {
       // leave stale data visible
     } finally {
       setLoading(false)
     }
-  }, [asset, alignment, dateRange])
+  }, [asset, alignment, dateRange, savedAt])
 
   // Refetch whenever filters change, reset to page 0
   useEffect(() => {
@@ -450,6 +458,11 @@ export function DecisionTimeline({ mode }: { mode: 'live' | 'demo' }) {
         <span className="mono" style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>
           {total} {total === 1 ? 'entry' : 'entries'}
         </span>
+        {lastUpdatedAt && (
+          <span className="mono" style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+            Updated {relativeTime(lastUpdatedAt)}
+          </span>
+        )}
       </div>
 
       {/* Entry list */}
